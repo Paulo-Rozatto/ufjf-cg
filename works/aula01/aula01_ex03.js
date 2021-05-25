@@ -1,12 +1,12 @@
-import * as THREE from '../build/three.module.js';
-import Stats from '../build/jsm/libs/stats.module.js';
-import { TrackballControls } from '../build/jsm/controls/TrackballControls.js';
+import * as THREE from '../../build/three.module.js';
+import Stats from '../../build/jsm/libs/stats.module.js';
+import { TrackballControls } from '../../build/jsm/controls/TrackballControls.js';
 import {
     initRenderer,
     initCamera,
     InfoBox,
     onWindowResize
-} from "../libs/util/util.js";
+} from "../../libs/util/util.js";
 
 var stats = new Stats();          // To show FPS information
 var scene = new THREE.Scene();    // Create main scene
@@ -21,7 +21,7 @@ var axesHelper = new THREE.AxesHelper(12);
 scene.add(axesHelper);
 
 // create the ground plane
-var planeGeometry = new THREE.PlaneGeometry(20, 20);
+var planeGeometry = new THREE.PlaneGeometry(21, 21);
 planeGeometry.translate(0.0, 0.0, -0.02); // To avoid conflict with the axeshelper
 var planeMaterial = new THREE.MeshBasicMaterial({
     color: "rgba(150, 150, 150)",
@@ -31,24 +31,18 @@ var plane = new THREE.Mesh(planeGeometry, planeMaterial);
 // add the plane to the scene
 scene.add(plane);
 
-// create a cube
-var cubeGeometry = new THREE.BoxGeometry(4, 4, 4);
-var cubeMaterial = new THREE.MeshNormalMaterial();
-var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-// position the cube
-cube.position.set(0.0, 0.0, 2.0);
-// add the cube to the scene
-scene.add(cube);
+const material = new THREE.MeshNormalMaterial({ transparent: true, opacity: 0.75 });
+let cube;
 
-var cube2 = new THREE.Mesh(cubeGeometry, cubeMaterial);
-cube2.position.set(-7.0, 7.0, 2.6);
-cube2.scale.set(1.3, 1.3, 1.3);
-scene.add(cube2);
+for (let i = -1; i < 2; i++) {
+    for (let j = -1; j < 2; j++) {
+        cube = randomCube(material);
 
-var cube3 = new THREE.Mesh(cubeGeometry, cubeMaterial);
-cube3.position.set(7.0, -7.0, 1.4);
-cube3.scale.set(0.7, 0.7, 0.7);
-scene.add(cube3);
+        cube.position.x = i * 7;
+        cube.position.y = j * 7;
+        scene.add(cube);
+    }
+}
 
 // Use this to show information onscreen
 var controls = new InfoBox();
@@ -69,4 +63,16 @@ function render() {
     trackballControls.update(); // Enable mouse movements
     requestAnimationFrame(render);
     renderer.render(scene, camera) // Render scene
+}
+
+function randomCube(material) {
+    const length = Math.floor(Math.random() * 6) + 1;
+
+    const cube = new THREE.Mesh(
+        new THREE.BoxGeometry(length, length, length),
+        material
+    );
+
+    cube.position.z = length / 2;
+    return cube;
 }
