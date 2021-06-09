@@ -23,71 +23,139 @@ scene.add(airplane);
 function buildAirplane() {
     // Tamanho aproximado de um aviao de pequeno porte real (F-16)
     // Comprimento 	 15 m
-    // Envergadura 	12 m
+    // Envergadura 	15 m
     // Altura 	     5 m
     const aviao = new THREE.Object3D();
 
 
     // Criando fuselagem do aviao
     const fuselagem = new THREE.Object3D();
-    const fuselagemMat = new THREE.MeshPhongMaterial({ color: 0xffde00, side: THREE.DoubleSide });
+    const fuselagemMat = new THREE.MeshPhongMaterial({ color: 0xffde00 });
+
     fuselagem.rotation.x = Math.PI * 0.5;
+    fuselagem.scale.set(1.5, 1);
     aviao.add(fuselagem);
 
-    const corpo = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.4, 1, 10, 16),
-        fuselagemMat
-    );
-    fuselagem.add(corpo);
-
     const bico = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.1, 1.4, 5, 32),
+        new THREE.CylinderGeometry(0.1, 1, 2.6, 16),
         fuselagemMat
     );
-    fuselagem.scale.z = 0.9
-    bico.position.y = 7.5;
+    bico.position.y = 1.3 + 0.8 + 4;
     fuselagem.add(bico);
 
-    const cambine = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 32, 16),
-        new THREE.MeshPhongMaterial({ color: 0x9999ff })
+    const bico2 = new THREE.Mesh(
+        new THREE.CylinderGeometry(1, 1.2, 0.8, 16),
+        fuselagemMat
+    )
+    bico2.position.y = 0.4 + 4;
+    fuselagem.add(bico2)
+
+    const corpo1 = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.2, 1.52, 4, 16),
+        fuselagemMat,
     );
-    cambine.rotation.x = Math.PI / 24;
-    cambine.scale.set(1, 1, 2);
-    cambine.position.z = 5;
-    cambine.position.y = 0.6;
+    corpo1.position.y = 2;
+    fuselagem.add(corpo1);
+
+    const corpo2 = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.52, 1.3, 1, 16),
+        fuselagemMat,
+    );
+    corpo2.position.y = -0.5;
+    fuselagem.add(corpo2);
+
+    const corpo3 = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.3, 1.2, 8, 16),
+        fuselagemMat
+    );
+    corpo3.position.y = -5;
+    fuselagem.add(corpo3);
+
+    const saida = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.2, 0.8, 1, 16),
+        fuselagemMat
+    );
+    saida.position.y = -9.5;
+    fuselagem.add(saida);
+
+    const cambine = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 16, 16),
+        new THREE.MeshPhongMaterial({ color: 0x9999ff }),
+    );
+    cambine.scale.set(1.5, 1, 2)
+    cambine.position.z = corpo1.position.y;
+    cambine.position.y = 1;
     aviao.add(cambine);
 
     // Criando as asas
     const asas = new THREE.Object3D();
-
-    const shape = new THREE.Shape();
-    shape.lineTo(6, 0);
-    shape.lineTo(0, Math.sqrt(3) * 3); // sin(45) * 6
-    shape.lineTo(0, 0);
-
     asas.rotation.x = Math.PI * 0.5;
     aviao.add(asas);
 
-    // const asaGeo = new THREE.CircleGeometry(7, 1);
-    const asaGeo = new THREE.ShapeGeometry(shape);
+    const extrudeSettings = {
+        steps: 2,
+        depth: 0.25,
+        bevelEnabled: false,
+    };
+
+    const shapeAsa = new THREE.Shape();
+    shapeAsa.lineTo(1, 0);
+    shapeAsa.lineTo(1, 0.4)
+    shapeAsa.lineTo(4, 0.4);
+    shapeAsa.lineTo(4, 0);
+    shapeAsa.lineTo(7, 0);
+    shapeAsa.lineTo(0, 4);
+    shapeAsa.lineTo(0, 0);
+
+    const asaGeo = new THREE.ExtrudeGeometry(shapeAsa, extrudeSettings);
     const asaMat = new THREE.MeshPhongMaterial({ color: 0xff0056, side: THREE.DoubleSide })
     const esquerda = new THREE.Mesh(
         asaGeo,
         asaMat
     )
-    esquerda.position.x = 1;
-    esquerda.position.y = -2.5;
+    esquerda.position.set(1.75, -5, -0.2);
     asas.add(esquerda);
 
     const direita = new THREE.Mesh(
         asaGeo,
         asaMat
     )
-    direita.position.x = -1;
-    direita.position.y = -2.5;
+    direita.position.set(-1.75, -5, -0.2);
     direita.rotation.y = Math.PI;
     asas.add(direita);
+
+    // Criando leme
+    const leme = new THREE.Object3D();
+    leme.position.z = -9;
+    aviao.add(leme);
+
+    const asaVertical = new THREE.Mesh(
+        asaGeo,
+        asaMat
+    );
+    asaVertical.rotation.set(Math.PI / 2, Math.PI / 2, 0);
+    asaVertical.scale.set(0.5, 0.7, 1);
+    asaVertical.position.set(0, 1.25, 0);
+    leme.add(asaVertical);
+
+    const miniEsquerda = new THREE.Mesh(
+        asaGeo,
+        asaMat
+    );
+    miniEsquerda.scale.set(0.5, 0.5, 0.5);
+    miniEsquerda.rotation.x = Math.PI / 2;
+    miniEsquerda.position.x = 1.8;
+    leme.add(miniEsquerda);
+
+    const miniDireita = new THREE.Mesh(
+        asaGeo,
+        asaMat
+    );
+    miniDireita.scale.set(0.5, 0.5, 0.5);
+    miniDireita.rotation.x = Math.PI / 2;
+    miniDireita.rotation.y = Math.PI;
+    miniDireita.position.x = -1.8;
+    leme.add(miniDireita);
 
     return aviao;
 }
