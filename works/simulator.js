@@ -9,16 +9,79 @@ import {
 
 const scene = new THREE.Scene();    // Create main scene
 const renderer = initRenderer();    // View function in util/utils
-const light = initDefaultLighting(scene, new THREE.Vector3(0, 30, 15));
+// const light = initDefaultLighting(scene, new THREE.Vector3(0, 30, 15));
+const light = new THREE.DirectionalLight(0xffffff);
 scene.add(light);
 
-const camera = initCamera(new THREE.Vector3(25, 10, 7)); // Init camera in this position
-scene.add(camera);
+let inspectionMode = false;
+
+const cameraPlane = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
+let cameraPlanePosition = new THREE.Vector3(0, 30, -230); // Salva posicao do grupo para voltar do modo inspecao
+cameraPlane.position.copy(cameraPlanePosition);
+scene.add(cameraPlane);
+
+const cameraPosition = new THREE.Vector3(1, 20, -65);
+const camera = initCamera(cameraPosition); // Init camera in this position
+camera.lookAt(cameraPlane);
+cameraPlane.add(camera);
 
 const trackballControls = new TrackballControls(camera, renderer.domElement);
+trackballControls.enabled = false;
 
 const airplane = buildAirplane();
-scene.add(airplane);
+airplane.scale.set(1, 0.8, 1);
+airplane.position.y = 5;
+cameraPlane.add(airplane);
+
+const groundGeo = new THREE.PlaneGeometry(500, 500, 50, 50);
+const ground = new THREE.Mesh(
+    groundGeo,
+    new THREE.MeshPhongMaterial({ color: 0x224466 })
+);
+ground.rotation.x = Math.PI * -0.5;
+scene.add(ground);
+
+const wireframe = new THREE.Mesh(
+    groundGeo,
+    new THREE.MeshPhongMaterial({ color: 0xDDDDFF, wireframe: true })
+);
+wireframe.position.z = 0.05;
+ground.add(wireframe);
+
+function onKeyDown(event) {
+    if (event.key === ' ') {
+        inspectionMode = !inspectionMode;
+        if (inspectionMode) {
+            ground.visible = false;
+            cameraPlanePosition.copy(cameraPlane.position);
+            cameraPlane.position.set(0, 0, 0)
+            trackballControls.enabled = true;
+        }
+        else {
+            trackballControls.enabled = false;
+            ground.visible = true;
+            cameraPlane.position.copy(cameraPlanePosition);
+            camera.position.copy(new THREE.Vector3(1, 20, -65))
+            camera.up.set(0, 1, 0);
+            camera.lookAt(cameraPlanePosition);
+        }
+    }
+}
+
+// Listen window size changes
+window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
+window.addEventListener('keydown', onKeyDown, false);
+
+render();
+function render() {
+    if (inspectionMode) {
+        trackballControls.update(); // Enable mouse movements
+    } else {
+        cameraPlane.position.z += 0.5;
+    }
+    requestAnimationFrame(render);
+    renderer.render(scene, camera) // Render scene
+}
 
 function buildAirplane() {
     // Tamanho aproximado de um aviao de pequeno porte real (F-16)
@@ -80,7 +143,7 @@ function buildAirplane() {
 
     const cambine = new THREE.Mesh(
         new THREE.SphereGeometry(1, 16, 16),
-        new THREE.MeshPhongMaterial({ color: 0x9999ff }),
+        new THREE.MeshPhongMaterial({ color: 0x9999ff, transparent: true, opacity: 0.9 }),
     );
     cambine.scale.set(1.5, 1, 2)
     cambine.position.z = corpo1.position.y;
@@ -158,14 +221,4 @@ function buildAirplane() {
     leme.add(miniDireita);
 
     return aviao;
-}
-
-// Listen window size changes
-window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
-
-render();
-function render() {
-    trackballControls.update(); // Enable mouse movements
-    requestAnimationFrame(render);
-    renderer.render(scene, camera) // Render scene
 }
