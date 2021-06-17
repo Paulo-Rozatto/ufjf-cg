@@ -6,7 +6,6 @@ import {
     onWindowResize,
     initDefaultLighting,
 } from "../libs/util/util.js";
-
 const scene = new THREE.Scene();    // Create main scene
 const renderer = initRenderer();    // View function in util/utils
 
@@ -38,7 +37,7 @@ const ground = new THREE.Mesh(
 );
 ground.rotation.x = Math.PI * -0.5;
 scene.add(ground);
-
+console.log(ground.position)
 const wireframe = new THREE.Mesh(
     groundGeo,
     new THREE.MeshPhongMaterial({ color: 0xDDDDFF, wireframe: true })
@@ -46,6 +45,12 @@ const wireframe = new THREE.Mesh(
 wireframe.position.z = 0.05;
 ground.add(wireframe);
 
+var ax, ay, rz, rx, velocity;
+velocity = 0.5;
+rx = 0.05;
+rz = 0.05;
+ax = 0;
+ay = 0;
 function onKeyDown(event) {
     if (event.key === ' ') {
         inspectionMode = !inspectionMode;
@@ -69,14 +74,30 @@ function onKeyDown(event) {
 // Listen window size changes
 window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
 window.addEventListener('keydown', onKeyDown, false);
+window.addEventListener('keydown', keyDown);
+window.addEventListener('keyup', keyUp);
+
+function updatePosition() {
+    cameraPlane.rotateY(ay  * velocity);
+    cameraPlane.rotateX(ax  * velocity);
+    cameraPlane.translateZ(velocity);
+    if(velocity < 0.5) {
+        if(airplane.rotation.x < 0.3)
+            airplane.rotation.x += 0.005;
+        if(cameraPlane.position.y > 0.5) {
+            cameraPlane.position.y -= 0.2;
+        }
+    }
+  }
 
 render();
 function render() {
     if (inspectionMode) {
         trackballControls.update(); // Enable mouse movements
     } else {
-        cameraPlane.position.z += 0.5;
+        cameraPlane.position.z += 0;
     }
+    updatePosition();
     requestAnimationFrame(render);
     renderer.render(scene, camera) // Render scene
 }
@@ -191,3 +212,126 @@ function buildAirplane() {
     scene.add(airplane);
     return airplane;
 }
+function keyDown(event) {
+    console.log(event.key);
+    switch (event.key) {
+      case 'ArrowLeft':{
+        if(airplane.rotation.z > -0.7) {
+            airplane.rotation.z -= rz;
+            if(ay < 0.008) {
+                ay += 0.0005;
+            }
+        }
+        else{
+            ay = 0.008;
+            console.log(airplane.rotation.z);
+        }
+        break;
+      }
+        
+        
+      case 'ArrowRight': {
+        if(airplane.rotation.z < 0.7){
+            airplane.rotation.z += rz;
+            if(ay > -0.008)
+                ay -= 0.0005;
+        }
+        else{
+            ay = -0.008;
+            console.log(airplane.rotation.z);
+        }
+
+        break;
+      }
+        
+      case 'ArrowUp':{
+        if(airplane.rotation.x < 0.5){
+            airplane.rotation.x += rx;
+            if(ax < 0.005)
+                ax += 0.0005;
+        }
+        else{
+            if(cameraPlane.position.y >= 0.5) {
+                cameraPlane.position.y -= 0.5;
+            }
+
+                console.log(cameraPlane.position)
+        }
+
+        break;
+      }
+      case 'ArrowDown':{
+        if(airplane.rotation.x > -0.5){
+            airplane.rotation.x -= 0.05;    
+            if(ax < 0.005)
+                ax -= 0.0005;
+        }
+        else{
+            cameraPlane.position.y += 0.5;
+            console.log(airplane.rotation.z);
+        }
+        break;
+      }
+      case 'a': {
+          if(velocity < 1.5)
+          {
+              velocity += 0.05;
+          }
+          break;
+      }
+      case 'q': {
+          if(velocity > 0.1) {
+              velocity -= 0.05;
+          }
+          break;
+      }
+    }
+  }
+
+  function keyUp(event) {
+    switch (event.key) {
+      case 'ArrowLeft': {
+          if(airplane.rotation.z < 0) {
+              while(airplane.rotation.z <= 0)
+              { 
+                airplane.rotation.z += rz
+              }
+          }
+          ay = 0;
+          break;  
+      }
+      case 'ArrowRight': {
+        if(airplane.rotation.z > 0) {
+            while(airplane.rotation.z > 0)
+            { 
+              airplane.rotation.z -= rz, 500
+            }
+        }
+        ay = 0;
+        break;
+    }
+      case 'ArrowUp': {
+        if(airplane.rotation.x > 0) {
+            while(airplane.rotation.x > 0)
+            { 
+              airplane.rotation.x -= rz;
+            }
+        }
+        ax = 0;
+        break;
+    }
+      case 'ArrowDown': {
+        if(airplane.rotation.x < 0) {
+            while(airplane.rotation.x < 0)
+            { 
+              airplane.rotation.x += rz;
+              if(rz > 0) {
+                  rz -= 0.0005;
+              }
+            }
+        }
+        ax = 0;
+        break;
+    }
+    }
+  }
