@@ -25,6 +25,7 @@ const trackballControls = new TrackballControls(camera, renderer.domElement);
 trackballControls.enabled = false;
 
 const airplane = buildAirplane();
+let planeRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
 cameraPlane.add(airplane);
 
 const light = initDefaultLighting(camera, new THREE.Vector3(0, 0, 0)); // init light
@@ -51,12 +52,15 @@ function toggleInspectionMode() {
         ground.visible = false;
         cameraPlanePosition.copy(cameraPlane.position);
         cameraPlane.position.set(0, 0, 0)
+        planeRotation.copy(airplane.rotation);
+        airplane.rotation.set(0, 0, 0);
         trackballControls.enabled = true;
     }
     else {
         trackballControls.enabled = false;
         ground.visible = true;
         cameraPlane.position.copy(cameraPlanePosition);
+        airplane.rotation.copy(planeRotation);
         camera.position.copy(new THREE.Vector3(1, 20, -65))
         camera.up.set(0, 1, 0);
         camera.lookAt(cameraPlanePosition);
