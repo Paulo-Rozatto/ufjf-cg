@@ -12,7 +12,7 @@ const renderer = initRenderer();    // View function in util/utils
 let inspectionMode = false;
 
 const cameraPlane = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
-let cameraPlanePosition = new THREE.Vector3(0, 30, -230); // Salva posicao do grupo para voltar do modo inspecao
+let cameraPlanePosition = new THREE.Vector3(0, 10, -350); // Salva posicao do grupo para voltar do modo inspecao
 cameraPlane.position.copy(cameraPlanePosition);
 scene.add(cameraPlane);
 
@@ -30,14 +30,13 @@ cameraPlane.add(airplane);
 const light = initDefaultLighting(camera, new THREE.Vector3(0, 0, 0)); // init light
 light.target = airplane;
 
-const groundGeo = new THREE.PlaneGeometry(500, 500, 50, 50);
+const groundGeo = new THREE.PlaneGeometry(700, 700, 70, 70);
 const ground = new THREE.Mesh(
     groundGeo,
     new THREE.MeshPhongMaterial({ color: 0x224466 })
 );
 ground.rotation.x = Math.PI * -0.5;
 scene.add(ground);
-console.log(ground.position)
 const wireframe = new THREE.Mesh(
     groundGeo,
     new THREE.MeshPhongMaterial({ color: 0xDDDDFF, wireframe: true })
@@ -45,59 +44,111 @@ const wireframe = new THREE.Mesh(
 wireframe.position.z = 0.05;
 ground.add(wireframe);
 
-var ax, ay, rz, rx, velocity;
-velocity = 0.5;
-rx = 0.05;
-rz = 0.05;
-ax = 0;
-ay = 0;
-function onKeyDown(event) {
-    if (event.key === ' ') {
-        inspectionMode = !inspectionMode;
-        if (inspectionMode) {
-            ground.visible = false;
-            cameraPlanePosition.copy(cameraPlane.position);
-            cameraPlane.position.set(0, 0, 0)
-            trackballControls.enabled = true;
-        }
-        else {
-            trackballControls.enabled = false;
-            ground.visible = true;
-            cameraPlane.position.copy(cameraPlanePosition);
-            camera.position.copy(new THREE.Vector3(1, 20, -65))
-            camera.up.set(0, 1, 0);
-            camera.lookAt(cameraPlanePosition);
-        }
+function toggleInspectionMode() {
+    inspectionMode = !inspectionMode;
+
+    if (inspectionMode) {
+        ground.visible = false;
+        cameraPlanePosition.copy(cameraPlane.position);
+        cameraPlane.position.set(0, 0, 0)
+        trackballControls.enabled = true;
     }
+    else {
+        trackballControls.enabled = false;
+        ground.visible = true;
+        cameraPlane.position.copy(cameraPlanePosition);
+        camera.position.copy(new THREE.Vector3(1, 20, -65))
+        camera.up.set(0, 1, 0);
+        camera.lookAt(cameraPlanePosition);
+    }
+}
+
+const MAX_SPEED = 2; // velocidade escalar maxima
+const SCALAR_ACCELERATION = 0.025; //  aceleração escalar
+let speed = 0.5; // velocidade escalar
+let linearVel = new THREE.Vector3(0, 0, 0); // vetor velocidade linear
+let angularVel = new THREE.Vector3(); // vetor velocidade angular
+
+
+function onKeyDown(event) {
+    switch (event.key) {
+        case ' ': {
+            toggleInspectionMode();
+            break;
+        };
+        case 'q': {
+            if (speed < MAX_SPEED) {
+                speed += SCALAR_ACCELERATION;
+            }
+            break;
+        };
+        case 'a': {
+            if (speed > 0) {
+                speed -= SCALAR_ACCELERATION;
+            }
+            else if (speed < 0) {
+                speed = 0;
+            }
+            break;
+        };
+        case 'ArrowLeft': {
+            angularVel.z = -SCALAR_ACCELERATION;
+            break;
+        };
+        case 'ArrowRight': {
+            angularVel.z = SCALAR_ACCELERATION;
+            break;
+        };
+        case 'ArrowUp': {
+            angularVel.x = SCALAR_ACCELERATION;
+            break;
+        };
+        case 'ArrowDown': {
+            angularVel.x = -SCALAR_ACCELERATION;
+            break;
+        };
+    }
+}
+
+function onKeyUp(event) {
+    switch (event.key) {
+        case 'ArrowLeft':
+        case 'ArrowRight': {
+            angularVel.z = 0;
+        };
+        case 'ArrowUp':
+        case 'ArrowDown': {
+            angularVel.x = 0;
+            break;
+        };
+    }
+}
+
+function updatePosition() {
+    airplane.rotation.z += angularVel.z - 0.04 * Math.sin(airplane.rotation.z);
+    airplane.rotation.x += angularVel.x - 0.04 * Math.sin(airplane.rotation.x);
+
+    cameraPlane.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.01;
+
+    linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(cameraPlane.rotation.y);
+    linearVel.y = speed * -Math.sin(airplane.rotation.x);
+    linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(cameraPlane.rotation.y);
+
+    cameraPlane.position.add(linearVel);
 }
 
 // Listen window size changes
 window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
 window.addEventListener('keydown', onKeyDown, false);
-window.addEventListener('keydown', keyDown);
-window.addEventListener('keyup', keyUp);
-
-function updatePosition() {
-    cameraPlane.rotateY(ay  * velocity);
-    cameraPlane.rotateX(ax  * velocity);
-    cameraPlane.translateZ(velocity);
-    if(velocity < 0.5) {
-        if(airplane.rotation.x < 0.3)
-            airplane.rotation.x += 0.005;
-        if(cameraPlane.position.y > 0.5) {
-            cameraPlane.position.y -= 0.2;
-        }
-    }
-  }
+window.addEventListener('keyup', onKeyUp, false);
 
 render();
 function render() {
     if (inspectionMode) {
         trackballControls.update(); // Enable mouse movements
     } else {
-        cameraPlane.position.z += 0;
+        updatePosition();
     }
-    updatePosition();
     requestAnimationFrame(render);
     renderer.render(scene, camera) // Render scene
 }
@@ -212,126 +263,3 @@ function buildAirplane() {
     scene.add(airplane);
     return airplane;
 }
-function keyDown(event) {
-    console.log(event.key);
-    switch (event.key) {
-      case 'ArrowLeft':{
-        if(airplane.rotation.z > -0.7) {
-            airplane.rotation.z -= rz;
-            if(ay < 0.008) {
-                ay += 0.0005;
-            }
-        }
-        else{
-            ay = 0.008;
-            console.log(airplane.rotation.z);
-        }
-        break;
-      }
-        
-        
-      case 'ArrowRight': {
-        if(airplane.rotation.z < 0.7){
-            airplane.rotation.z += rz;
-            if(ay > -0.008)
-                ay -= 0.0005;
-        }
-        else{
-            ay = -0.008;
-            console.log(airplane.rotation.z);
-        }
-
-        break;
-      }
-        
-      case 'ArrowUp':{
-        if(airplane.rotation.x < 0.5){
-            airplane.rotation.x += rx;
-            if(ax < 0.005)
-                ax += 0.0005;
-        }
-        else{
-            if(cameraPlane.position.y >= 0.5) {
-                cameraPlane.position.y -= 0.5;
-            }
-
-                console.log(cameraPlane.position)
-        }
-
-        break;
-      }
-      case 'ArrowDown':{
-        if(airplane.rotation.x > -0.5){
-            airplane.rotation.x -= 0.05;    
-            if(ax < 0.005)
-                ax -= 0.0005;
-        }
-        else{
-            cameraPlane.position.y += 0.5;
-            console.log(airplane.rotation.z);
-        }
-        break;
-      }
-      case 'a': {
-          if(velocity < 1.5)
-          {
-              velocity += 0.05;
-          }
-          break;
-      }
-      case 'q': {
-          if(velocity > 0.1) {
-              velocity -= 0.05;
-          }
-          break;
-      }
-    }
-  }
-
-  function keyUp(event) {
-    switch (event.key) {
-      case 'ArrowLeft': {
-          if(airplane.rotation.z < 0) {
-              while(airplane.rotation.z <= 0)
-              { 
-                airplane.rotation.z += rz
-              }
-          }
-          ay = 0;
-          break;  
-      }
-      case 'ArrowRight': {
-        if(airplane.rotation.z > 0) {
-            while(airplane.rotation.z > 0)
-            { 
-              airplane.rotation.z -= rz, 500
-            }
-        }
-        ay = 0;
-        break;
-    }
-      case 'ArrowUp': {
-        if(airplane.rotation.x > 0) {
-            while(airplane.rotation.x > 0)
-            { 
-              airplane.rotation.x -= rz;
-            }
-        }
-        ax = 0;
-        break;
-    }
-      case 'ArrowDown': {
-        if(airplane.rotation.x < 0) {
-            while(airplane.rotation.x < 0)
-            { 
-              airplane.rotation.x += rz;
-              if(rz > 0) {
-                  rz -= 0.0005;
-              }
-            }
-        }
-        ax = 0;
-        break;
-    }
-    }
-  }
