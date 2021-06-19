@@ -81,17 +81,14 @@ function onKeyDown(event) {
             break;
         };
         case 'q': {
-            if (speed < MAX_SPEED) {
+            if (speed <= MAX_SPEED - SCALAR_ACCELERATION) {
                 speed += SCALAR_ACCELERATION;
             }
             break;
         };
         case 'a': {
-            if (speed > 0) {
+            if (speed >= SCALAR_ACCELERATION) {
                 speed -= SCALAR_ACCELERATION;
-            }
-            else if (speed < 0) {
-                speed = 0;
             }
             break;
         };
