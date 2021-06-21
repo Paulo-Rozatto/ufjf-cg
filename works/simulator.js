@@ -11,22 +11,22 @@ const renderer = initRenderer();    // View function in util/utils
 
 let inspectionMode = false;
 
-const cameraPlane = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
-let cameraPlanePosition = new THREE.Vector3(0, 10, -350); // Salva posicao do grupo para voltar do modo inspecao
-cameraPlane.position.copy(cameraPlanePosition);
-scene.add(cameraPlane);
+const mainGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
+const mainGroupPosition = new THREE.Vector3(0, 10, -350); // Salva posicao do grupo para voltar do modo inspecao
+mainGroup.position.copy(mainGroupPosition);
+scene.add(mainGroup);
 
 const cameraPosition = new THREE.Vector3(1, 20, -65);
 const camera = initCamera(cameraPosition); // Init camera in this position
-camera.lookAt(cameraPlane);
-cameraPlane.add(camera);
+camera.lookAt(mainGroup);
+mainGroup.add(camera);
 
 const trackballControls = new TrackballControls(camera, renderer.domElement);
 trackballControls.enabled = false;
 
 const airplane = buildAirplane();
-let planeRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
-cameraPlane.add(airplane);
+const airPlaneRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
+mainGroup.add(airplane);
 
 const light = initDefaultLighting(camera, new THREE.Vector3(0, 0, 0)); // init light
 light.target = airplane;
@@ -50,20 +50,20 @@ function toggleInspectionMode() {
 
     if (inspectionMode) {
         ground.visible = false;
-        cameraPlanePosition.copy(cameraPlane.position);
-        cameraPlane.position.set(0, 0, 0)
-        planeRotation.copy(airplane.rotation);
+        mainGroupPosition.copy(mainGroup.position);
+        mainGroup.position.set(0, 0, 0)
+        airPlaneRotation.copy(airplane.rotation);
         airplane.rotation.set(0, 0, 0);
         trackballControls.enabled = true;
     }
     else {
         trackballControls.enabled = false;
         ground.visible = true;
-        cameraPlane.position.copy(cameraPlanePosition);
-        airplane.rotation.copy(planeRotation);
+        mainGroup.position.copy(mainGroupPosition);
+        airplane.rotation.copy(airPlaneRotation);
         camera.position.copy(new THREE.Vector3(1, 20, -65))
         camera.up.set(0, 1, 0);
-        camera.lookAt(cameraPlanePosition);
+        camera.lookAt(mainGroupPosition);
     }
 }
 
@@ -116,6 +116,7 @@ function onKeyUp(event) {
         case 'ArrowLeft':
         case 'ArrowRight': {
             angularVel.z = 0;
+            break;
         };
         case 'ArrowUp':
         case 'ArrowDown': {
@@ -126,16 +127,18 @@ function onKeyUp(event) {
 }
 
 function updatePosition() {
-    airplane.rotation.z += angularVel.z - 0.04 * Math.sin(airplane.rotation.z);
-    airplane.rotation.x += angularVel.x - 0.04 * Math.sin(airplane.rotation.x);
+    // rotacao += velocidade angular - contrapeso
+    // o contrapeso multiplicado pelo seno faz o comportamento de limitar a rotacao e volta-la ao inicial
+    airplane.rotation.z += angularVel.z - 0.025 * Math.sin(airplane.rotation.z);
+    airplane.rotation.x += angularVel.x - 0.025 * Math.sin(airplane.rotation.x);
 
-    cameraPlane.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.01;
+    mainGroup.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.015;
 
-    linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(cameraPlane.rotation.y);
+    linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(mainGroup.rotation.y);
     linearVel.y = speed * -Math.sin(airplane.rotation.x);
-    linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(cameraPlane.rotation.y);
+    linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(mainGroup.rotation.y);
 
-    cameraPlane.position.add(linearVel);
+    mainGroup.position.add(linearVel);
 }
 
 // Listen window size changes
