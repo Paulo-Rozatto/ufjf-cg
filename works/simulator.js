@@ -1,5 +1,6 @@
 import * as THREE from '../build/three.module.js';
 import { TrackballControls } from '../build/jsm/controls/TrackballControls.js';
+import { GLTFLoader } from '../build/jsm/loaders/GLTFLoader.js';
 import {
     initRenderer,
     initCamera,
@@ -8,6 +9,8 @@ import {
 } from "../libs/util/util.js";
 const scene = new THREE.Scene();    // Create main scene
 const renderer = initRenderer();    // View function in util/utils
+renderer.setClearColor(0x87ceeb)
+renderer.shadowMap.enabled = true;
 
 let inspectionMode = false;
 
@@ -28,28 +31,70 @@ const airplane = buildAirplane();
 const airPlaneRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
 mainGroup.add(airplane);
 
-const light = initDefaultLighting(camera, new THREE.Vector3(0, 0, 0)); // init light
-light.target = airplane;
+const light = new THREE.DirectionalLight(0xffffff, 1.2);
+light.position.set(400, 300, -600);
+light.castShadow = true;
+scene.add(light);
 
-const groundGeo = new THREE.PlaneGeometry(700, 700, 70, 70);
-const ground = new THREE.Mesh(
-    groundGeo,
-    new THREE.MeshPhongMaterial({ color: 0x224466 })
+light.shadow.camera.near = 600;
+light.shadow.camera.far = 1200;
+light.shadow.camera.left = -100;
+light.shadow.camera.right = 100
+light.shadow.camera.top = 200;
+
+light.target.updateMatrixWorld();
+light.shadow.camera.updateProjectionMatrix();
+
+const cameraHelper = new THREE.CameraHelper(light.shadow.camera);
+scene.add(cameraHelper);
+
+const helper = new THREE.DirectionalLightHelper(light, 5);
+scene.add(helper);
+
+const hemisphereLight = new THREE.HemisphereLight(0xa7ceeb, 0x234423, 1.5);
+scene.add(hemisphereLight);
+
+let terrain;
+// Load terrain source
+const loader = new GLTFLoader();
+loader.load(
+    'assets/terrain2.glb',
+    // called when the resource is loaded
+    function (gltf) {
+        terrain = gltf.scene;
+
+        let color;
+        terrain.traverse((child) => {
+            if (child.isMesh) {
+                color = child.material.color;
+                console.log(color);
+                child.material = new THREE.MeshLambertMaterial({ color });
+
+                if (/Plane*/.test(child.name)) {
+                    child.receiveShadow = true;
+                }
+                child.castShadow = true;
+            }
+        });
+        console.log(terrain);
+
+        scene.add(terrain);
+    },
+    // called while loading is progressing
+    function (xhr) {
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    },
+    // called when loading has errors
+    function (error) {
+        console.error('An error happened', error);
+    }
 );
-ground.rotation.x = Math.PI * -0.5;
-scene.add(ground);
-const wireframe = new THREE.Mesh(
-    groundGeo,
-    new THREE.MeshPhongMaterial({ color: 0xDDDDFF, wireframe: true })
-);
-wireframe.position.z = 0.05;
-ground.add(wireframe);
 
 function toggleInspectionMode() {
     inspectionMode = !inspectionMode;
 
     if (inspectionMode) {
-        ground.visible = false;
+        terrain.visible = false;
         mainGroupPosition.copy(mainGroup.position);
         mainGroup.position.set(0, 0, 0)
         airPlaneRotation.copy(airplane.rotation);
@@ -58,7 +103,7 @@ function toggleInspectionMode() {
     }
     else {
         trackballControls.enabled = false;
-        ground.visible = true;
+        terrain.visible = true;
         mainGroup.position.copy(mainGroupPosition);
         airplane.rotation.copy(airPlaneRotation);
         camera.position.copy(new THREE.Vector3(1, 20, -65))
