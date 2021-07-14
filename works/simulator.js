@@ -14,22 +14,23 @@ renderer.shadowMap.enabled = true;
 
 let inspectionMode = false;
 
-const mainGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
-const mainGroupPosition = new THREE.Vector3(0, 10, -350); // Salva posicao do grupo para voltar do modo inspecao
-mainGroup.position.copy(mainGroupPosition);
-scene.add(mainGroup);
+const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
+const movementGroupPosition = new THREE.Vector3(0, 10, -350); // Salva posicao do grupo para voltar do modo inspecao
+movementGroup.position.copy(movementGroupPosition);
+scene.add(movementGroup);
 
 const cameraPosition = new THREE.Vector3(1, 20, -65);
 const camera = initCamera(cameraPosition); // Init camera in this position
-camera.lookAt(mainGroup);
-mainGroup.add(camera);
+camera.lookAt(movementGroup);
+movementGroup.add(camera);
 
 const trackballControls = new TrackballControls(camera, renderer.domElement);
 trackballControls.enabled = false;
 
 const airplane = buildAirplane();
 const airPlaneRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
-mainGroup.add(airplane);
+airplane.scale.set(0.7, 0.7, 0.7);
+movementGroup.add(airplane);
 
 const light = new THREE.DirectionalLight(0xffffff, 1.2);
 light.position.set(400, 300, -600);
@@ -54,49 +55,116 @@ scene.add(helper);
 const hemisphereLight = new THREE.HemisphereLight(0xa7ceeb, 0x234423, 1.5);
 scene.add(hemisphereLight);
 
-let terrain;
-// Load terrain source
 const loader = new GLTFLoader();
-loader.load(
-    'assets/terrain2.glb',
-    // called when the resource is loaded
-    function (gltf) {
-        terrain = gltf.scene;
 
-        let color;
-        terrain.traverse((child) => {
-            if (child.isMesh) {
-                color = child.material.color;
-                console.log(color);
-                child.material = new THREE.MeshLambertMaterial({ color });
+function onProgress(xhr) {
+    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+}
 
-                if (/Plane*/.test(child.name)) {
-                    child.receiveShadow = true;
-                }
-                child.castShadow = true;
+function onError() {
+    console.error('An error happened', error);
+}
+
+//----- Load terrain source -----
+
+let terrain;
+
+loader.load('assets/terrain2.glb', terrainOnLoad, onProgress, onError)
+
+function terrainOnLoad(gltf) {
+    let color;
+    terrain = gltf.scene;
+
+
+    terrain.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+            child.material = new THREE.MeshLambertMaterial({ color });
+
+            if (/Plane*/.test(child.name)) {
+                child.receiveShadow = true;
             }
-        });
-        console.log(terrain);
+            child.castShadow = true;
+        }
+    });
 
-        scene.add(terrain);
-    },
-    // called while loading is progressing
-    function (xhr) {
-        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-    },
-    // called when loading has errors
-    function (error) {
-        console.error('An error happened', error);
+    scene.add(terrain);
+
+
+    window.setTimeout(
+        () => { loader.load('assets/tree1.glb', treeOnLoad, onProgress, onError); },
+        500
+    )
+}
+
+let tree1;
+function treeOnLoad(gltf) {
+    tree1 = gltf.scene;
+
+    let color;
+    gltf.scene.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+            child.material = new THREE.MeshLambertMaterial({ color });
+            child.castShadow = true;
+        }
+    });
+
+    scene.add(tree1);
+    spreadTrees(tree1);
+}
+
+function spreadTrees(tree) {
+    const near = 0;
+    const far = 50;
+    const origin = new THREE.Vector3(0, 20, -200);
+    const direction = new THREE.Vector3(0, -1, 0);
+    const newPosition = new THREE.Vector3();
+    const raycaster = new THREE.Raycaster(origin, direction, near, far);
+
+    let treeClone, treeCount = 0, t = 0;
+    let intersection;
+
+    let offset = 25;
+
+
+    intersection = raycaster.intersectObject(terrain, true)
+
+
+    while (treeCount < 120) {
+        newPosition.set(
+            Math.sin(t) * 625,
+            0,
+            -470 + t + offset,
+        );
+        offset *= -1;
+
+        raycaster.set(newPosition, direction);
+
+        intersection = raycaster.intersectObject(terrain, true)[0];
+        console.log(intersection);
+
+        if (intersection) {
+            newPosition.y = intersection.distance * -1;
+
+            treeClone = tree.clone();
+            treeClone.position.copy(newPosition);
+            treeCount += 1;
+
+            scene.add(treeClone);
+        }
+        t += 7;
+
     }
-);
+}
 
 function toggleInspectionMode() {
     inspectionMode = !inspectionMode;
 
     if (inspectionMode) {
         terrain.visible = false;
-        mainGroupPosition.copy(mainGroup.position);
-        mainGroup.position.set(0, 0, 0)
+        movementGroupPosition.copy(movementGroup.position);
+        movementGroup.position.set(0, 0, 0)
         airPlaneRotation.copy(airplane.rotation);
         airplane.rotation.set(0, 0, 0);
         trackballControls.enabled = true;
@@ -104,11 +172,11 @@ function toggleInspectionMode() {
     else {
         trackballControls.enabled = false;
         terrain.visible = true;
-        mainGroup.position.copy(mainGroupPosition);
+        movementGroup.position.copy(movementGroupPosition);
         airplane.rotation.copy(airPlaneRotation);
         camera.position.copy(new THREE.Vector3(1, 20, -65))
         camera.up.set(0, 1, 0);
-        camera.lookAt(mainGroupPosition);
+        camera.lookAt(movementGroupPosition);
     }
 }
 
@@ -177,13 +245,13 @@ function updatePosition() {
     airplane.rotation.z += angularVel.z - 0.025 * Math.sin(airplane.rotation.z);
     airplane.rotation.x += angularVel.x - 0.025 * Math.sin(airplane.rotation.x);
 
-    mainGroup.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.015;
+    movementGroup.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.015;
 
-    linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(mainGroup.rotation.y);
+    linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(movementGroup.rotation.y);
     linearVel.y = speed * -Math.sin(airplane.rotation.x);
-    linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(mainGroup.rotation.y);
+    linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(movementGroup.rotation.y);
 
-    mainGroup.position.add(linearVel);
+    movementGroup.position.add(linearVel);
 }
 
 // Listen window size changes
