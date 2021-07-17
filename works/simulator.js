@@ -3,25 +3,32 @@ import { TrackballControls } from '../build/jsm/controls/TrackballControls.js';
 import { GLTFLoader } from '../build/jsm/loaders/GLTFLoader.js';
 import {
     initRenderer,
-    initCamera,
     onWindowResize,
-    initDefaultLighting,
 } from "../libs/util/util.js";
 const scene = new THREE.Scene();    // Create main scene
 const renderer = initRenderer();    // View function in util/utils
 renderer.setClearColor(0x87ceeb)
 renderer.shadowMap.enabled = true;
 
-let inspectionMode = false;
+// Variaveis de modos de camera
+let inspectionMode = false, cockpitMode = false;
 
-const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
 const movementGroupPosition = new THREE.Vector3(0, 10, -350); // Salva posicao do grupo para voltar do modo inspecao
+const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
 movementGroup.position.copy(movementGroupPosition);
 scene.add(movementGroup);
 
-const cameraPosition = new THREE.Vector3(1, 20, -65);
-const camera = initCamera(cameraPosition); // Init camera in this position
-movementGroup.add(camera);
+const cameraHolder = new THREE.Group(); // a função do cameraholder é fazer a camera acompanhar a rotação do avião no modo cockpit sem girar a camera diretamente
+const holderPosition = new THREE.Vector3(0, 10, 0);
+cameraHolder.position.copy(holderPosition);
+movementGroup.add(cameraHolder);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+const cameraPosition = new THREE.Vector3(0, 0, -50);
+camera.position.copy(cameraPosition);
+camera.lookAt(movementGroupPosition);
+cameraHolder.add(camera);
+
 
 const trackballControls = new TrackballControls(camera, renderer.domElement);
 trackballControls.enabled = false;
@@ -75,16 +82,20 @@ function airplaneOnLoad(gltf) {
     let color, transparent, opacity;
     airplane.traverse((child) => {
         if (child.isMesh) {
+
             color = child.material.color;
             transparent = child.material.transparent;
             opacity = child.material.opacity;
 
-            child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity })
+            if (/cockpit/.test(child.name)) {
+                child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity, side: THREE.DoubleSide })
+            }
+            else
+                child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity })
         }
     });
 
     movementGroup.add(airplane);
-    camera.lookAt(airplane.position);
 }
 
 //----- Load terrain source -----
@@ -186,6 +197,10 @@ function toggleInspectionMode() {
     inspectionMode = !inspectionMode;
 
     if (inspectionMode) {
+        if (cockpitMode) {
+            toggleCockpitMode();
+        }
+
         terrain.visible = false;
         movementGroupPosition.copy(movementGroup.position);
         movementGroup.position.set(0, 0, 0)
@@ -200,9 +215,32 @@ function toggleInspectionMode() {
         terrain.visible = true;
         movementGroup.position.copy(movementGroupPosition);
         airplane.rotation.copy(airPlaneRotation);
+
         camera.up.set(0, 1, 0);
         camera.position.copy(cameraPosition)
-        camera.lookAt(airplane.position);
+        camera.lookAt(movementGroupPosition);
+    }
+}
+
+function toggleCockpitMode() {
+    cockpitMode = !cockpitMode;
+
+    if (cockpitMode) {
+        if (inspectionMode) {
+            toggleInspectionMode();
+        }
+
+        airplane.add(cameraHolder);
+        cameraHolder.position.x = -0.25;
+        cameraHolder.position.y = 2.5;
+        cameraHolder.position.z = -1 * cameraPosition.z + 0.8;
+    }
+    else {
+        movementGroup.add(cameraHolder);
+
+        cameraHolder.position.copy(holderPosition);
+        camera.up.set(0, 1, 0);
+        camera.position.copy(cameraPosition)
     }
 }
 
@@ -219,6 +257,10 @@ function onKeyDown(event) {
             toggleInspectionMode();
             break;
         };
+        case 'c': {
+            toggleCockpitMode();
+            break;
+        }
         case 'q': {
             if (speed <= MAX_SPEED - SCALAR_ACCELERATION) {
                 speed += SCALAR_ACCELERATION;
