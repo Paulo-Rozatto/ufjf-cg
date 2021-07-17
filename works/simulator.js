@@ -21,16 +21,10 @@ scene.add(movementGroup);
 
 const cameraPosition = new THREE.Vector3(1, 20, -65);
 const camera = initCamera(cameraPosition); // Init camera in this position
-camera.lookAt(movementGroup);
 movementGroup.add(camera);
 
 const trackballControls = new TrackballControls(camera, renderer.domElement);
 trackballControls.enabled = false;
-
-const airplane = buildAirplane();
-const airPlaneRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
-airplane.scale.set(0.7, 0.7, 0.7);
-movementGroup.add(airplane);
 
 const light = new THREE.DirectionalLight(0xffffff, 1.2);
 light.position.set(400, 300, -600);
@@ -52,8 +46,10 @@ scene.add(cameraHelper);
 const helper = new THREE.DirectionalLightHelper(light, 5);
 scene.add(helper);
 
-const hemisphereLight = new THREE.HemisphereLight(0xa7ceeb, 0x234423, 1.5);
+const hemisphereLight = new THREE.HemisphereLight(0xa7ceeb, 0x234423, 1.6);
 scene.add(hemisphereLight);
+
+//----- Loader and shared loading helper functions -----
 
 const loader = new GLTFLoader();
 
@@ -61,8 +57,34 @@ function onProgress(xhr) {
     console.log((xhr.loaded / xhr.total * 100) + '% loaded');
 }
 
-function onError() {
+function onError(error) {
     console.error('An error happened', error);
+}
+
+//----- Load airplane ------
+
+let airplane
+let airPlaneRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
+
+loader.load('assets/airplane.glb', airplaneOnLoad, onProgress, onError);
+
+function airplaneOnLoad(gltf) {
+    airplane = gltf.scene;
+
+    // Converte o MeshStandardMaterial para MeshPhongMaterial
+    let color, transparent, opacity;
+    airplane.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+            transparent = child.material.transparent;
+            opacity = child.material.opacity;
+
+            child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity })
+        }
+    });
+
+    movementGroup.add(airplane);
+    camera.lookAt(airplane.position);
 }
 
 //----- Load terrain source -----
@@ -75,34 +97,38 @@ function terrainOnLoad(gltf) {
     let color;
     terrain = gltf.scene;
 
-
+    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
     terrain.traverse((child) => {
         if (child.isMesh) {
             color = child.material.color;
+
             child.material = new THREE.MeshLambertMaterial({ color });
+            child.castShadow = true;
 
             if (/Plane*/.test(child.name)) {
                 child.receiveShadow = true;
             }
-            child.castShadow = true;
         }
     });
-
     scene.add(terrain);
 
-
+    // O carregamento das arvores esta sendo chamado nesse callback porque o terrno precisa estar carregado e adcionado na cena para posicionar
+    // as arvores corretamente
+    // apesar de scene.add() ser uma função síncrona, o modelo demora um pouco a ser realmente adcionado na cena, entao precisa do timeout para compensar o delay
     window.setTimeout(
         () => { loader.load('assets/tree1.glb', treeOnLoad, onProgress, onError); },
         500
-    )
+    );
 }
 
 let tree1;
+
 function treeOnLoad(gltf) {
     tree1 = gltf.scene;
 
+    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
     let color;
-    gltf.scene.traverse((child) => {
+    tree1.traverse((child) => {
         if (child.isMesh) {
             color = child.material.color;
             child.material = new THREE.MeshLambertMaterial({ color });
@@ -110,8 +136,7 @@ function treeOnLoad(gltf) {
         }
     });
 
-    scene.add(tree1);
-    spreadTrees(tree1);
+    spreadTrees(tree1); // cria clones e espalha as arvores
 }
 
 function spreadTrees(tree) {
@@ -142,7 +167,6 @@ function spreadTrees(tree) {
         raycaster.set(newPosition, direction);
 
         intersection = raycaster.intersectObject(terrain, true)[0];
-        console.log(intersection);
 
         if (intersection) {
             newPosition.y = intersection.distance * -1;
@@ -167,16 +191,18 @@ function toggleInspectionMode() {
         movementGroup.position.set(0, 0, 0)
         airPlaneRotation.copy(airplane.rotation);
         airplane.rotation.set(0, 0, 0);
+
         trackballControls.enabled = true;
     }
     else {
         trackballControls.enabled = false;
+
         terrain.visible = true;
         movementGroup.position.copy(movementGroupPosition);
         airplane.rotation.copy(airPlaneRotation);
-        camera.position.copy(new THREE.Vector3(1, 20, -65))
         camera.up.set(0, 1, 0);
-        camera.lookAt(movementGroupPosition);
+        camera.position.copy(cameraPosition)
+        camera.lookAt(airplane.position);
     }
 }
 
@@ -240,18 +266,21 @@ function onKeyUp(event) {
 }
 
 function updatePosition() {
-    // rotacao += velocidade angular - contrapeso
-    // o contrapeso multiplicado pelo seno faz o comportamento de limitar a rotacao e volta-la ao inicial
-    airplane.rotation.z += angularVel.z - 0.025 * Math.sin(airplane.rotation.z);
-    airplane.rotation.x += angularVel.x - 0.025 * Math.sin(airplane.rotation.x);
+    // testa se o modelo ja esta carreagado
+    if (airplane) {
+        // rotacao += velocidade angular - contrapeso
+        // o contrapeso multiplicado pelo seno faz o comportamento de limitar a rotacao e volta-la ao inicial
+        airplane.rotation.z += angularVel.z - 0.025 * Math.sin(airplane.rotation.z);
+        airplane.rotation.x += angularVel.x - 0.025 * Math.sin(airplane.rotation.x);
 
-    movementGroup.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.015;
+        movementGroup.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.015;
 
-    linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(movementGroup.rotation.y);
-    linearVel.y = speed * -Math.sin(airplane.rotation.x);
-    linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(movementGroup.rotation.y);
+        linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(movementGroup.rotation.y);
+        linearVel.y = speed * -Math.sin(airplane.rotation.x);
+        linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(movementGroup.rotation.y);
 
-    movementGroup.position.add(linearVel);
+        movementGroup.position.add(linearVel);
+    }
 }
 
 // Listen window size changes
@@ -268,115 +297,4 @@ function render() {
     }
     requestAnimationFrame(render);
     renderer.render(scene, camera) // Render scene
-}
-
-function buildAirplane() {
-    const airplane = new THREE.Object3D();
-
-    const deg90 = Math.PI / 2;
-
-    const material = new THREE.MeshPhongMaterial({ color: 0xAB9833 })
-    const windowMaterial = new THREE.MeshPhongMaterial({ color: 0x23232F })
-
-    const nose = new THREE.Mesh(
-        new THREE.ConeGeometry(0.5, 1, 32),
-        material
-    );
-    nose.rotation.set(deg90, 0, 0);
-    nose.scale.set(1, 1, 1.3);
-    nose.position.set(0, 0, 6.5);
-    airplane.add(nose);
-
-    const frontFuselage = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.5, 1.5, 4, 32),
-        material
-    );
-    frontFuselage.rotation.set(deg90, 0, 0);
-    frontFuselage.scale.set(1, 1, 1.3);
-    frontFuselage.position.set(0, 0, 4);
-    airplane.add(frontFuselage);
-
-    const cockpitWindow = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.2, 1.5, 3, 32, 1, true, deg90 / 2, 3 * deg90),
-        windowMaterial
-    );
-    cockpitWindow.rotation.set(deg90, 0, 0);
-    cockpitWindow.scale.set(1, 1.2, 1.5);
-    cockpitWindow.position.set(0, 0.25, 3.8);
-    airplane.add(cockpitWindow);
-
-    const cockpit = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.5, 1.5, 3, 32),
-        material
-    );
-    cockpit.rotation.set(deg90, 0, 0);
-    cockpit.scale.set(1, 1, 1.5);
-    cockpit.position.set(0, 0.3, 0.5);
-    airplane.add(cockpit);
-
-    const backFuselage = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.5, 0.75, 8, 32),
-        material
-    );
-    backFuselage.rotation.set(deg90, 0, 0);
-    backFuselage.scale.set(1, 1, 1.5);
-    backFuselage.position.set(0, 0.3, -5);
-    airplane.add(backFuselage);
-
-    const tail = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.75, 0.55, 1, 32),
-        material
-    );
-    tail.rotation.set(deg90, 0, 0);
-    tail.scale.set(1, 1, 1.5);
-    tail.position.set(0, 0.30, -9.5);
-    airplane.add(tail);
-
-    const wingLeft = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.25, 0.125, 8, 4),
-        material
-    );
-    wingLeft.rotation.set(0, 0, deg90);
-    wingLeft.scale.set(1, 1, 8);
-    wingLeft.position.set(5.45, 0, 0);
-    airplane.add(wingLeft);
-
-    const wingRight = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.25, 0.125, 8, 4),
-        material
-    );
-    wingRight.rotation.set(0, 0, -deg90);
-    wingRight.scale.set(1, 1, 8);
-    wingRight.position.set(-5.45, 0, 0);
-    airplane.add(wingRight);
-
-    const stabilizerRight = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.25, 0.125, 4, 4),
-        material
-    );
-    stabilizerRight.rotation.set(0, 0, -deg90);
-    stabilizerRight.scale.set(1, 1, 4);
-    stabilizerRight.position.set(-2.5, 0, -8);
-    airplane.add(stabilizerRight);
-
-    const stabilizerLeft = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.25, 0.125, 4, 4),
-        material
-    );
-    stabilizerLeft.rotation.set(0, 0, deg90);
-    stabilizerLeft.scale.set(1, 1, 4);
-    stabilizerLeft.position.set(2.5, 0, -8);
-    airplane.add(stabilizerLeft);
-
-    const stabilizerVertical = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.125, 0.25, 4, 4),
-        material
-    );
-    stabilizerVertical.rotation.set(-deg90 / 10, 0, 0);
-    stabilizerVertical.scale.set(1, 1, 4);
-    stabilizerVertical.position.set(0, 3, -8.5);
-    airplane.add(stabilizerVertical);
-
-    scene.add(airplane);
-    return airplane;
 }
