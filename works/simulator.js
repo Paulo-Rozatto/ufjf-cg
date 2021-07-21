@@ -35,14 +35,20 @@ trackballControls.enabled = false;
 
 const light = new THREE.DirectionalLight(0xffffff, 1.2);
 light.position.set(400, 300, -600);
-light.castShadow = true;
+// light.castShadow = true;
 scene.add(light);
 
-light.shadow.camera.near = 600;
-light.shadow.camera.far = 1200;
-light.shadow.camera.left = -100;
-light.shadow.camera.right = 100
-light.shadow.camera.top = 200;
+const lightTarget = new THREE.Object3D();
+lightTarget.position.set(0, 0, 600);
+scene.add(lightTarget);
+light.target = lightTarget;
+
+// light.shadow.camera.near = 100;
+// light.shadow.camera.far = 1500;
+// light.shadow.camera.left = -600;
+// light.shadow.camera.right = 900
+// light.shadow.camera.top = 300;
+// light.shadow.camera.bottom = -500;
 
 light.target.updateMatrixWorld();
 light.shadow.camera.updateProjectionMatrix();
@@ -99,29 +105,35 @@ function airplaneOnLoad(gltf) {
 }
 
 //----- Load terrain source -----
+const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(4000, 4000),
+    new THREE.MeshLambertMaterial({ color: 0x002D0B, })
+);
+plane.rotation.x = Math.PI * -0.5;
+plane.receiveShadow = true;
+plane.position.y = 2.5;
+scene.add(plane);
 
-let terrain;
 
-loader.load('assets/terrain2.glb', terrainOnLoad, onProgress, onError)
+let mountains;
 
-function terrainOnLoad(gltf) {
+loader.load('assets/terrain3.glb', mountainsOnLoad, onProgress, onError)
+
+function mountainsOnLoad(gltf) {
     let color;
-    terrain = gltf.scene;
+    mountains = gltf.scene;
 
     // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
-    terrain.traverse((child) => {
+    mountains.traverse((child) => {
         if (child.isMesh) {
             color = child.material.color;
 
             child.material = new THREE.MeshLambertMaterial({ color });
-            child.castShadow = true;
-
-            if (/Plane*/.test(child.name)) {
-                child.receiveShadow = true;
-            }
+            // child.castShadow = true;
+            child.receiveShadow = true;
         }
     });
-    scene.add(terrain);
+    scene.add(mountains);
 
     // O carregamento das arvores esta sendo chamado nesse callback porque o terrno precisa estar carregado e adcionado na cena para posicionar
     // as arvores corretamente
@@ -143,7 +155,7 @@ function treeOnLoad(gltf) {
         if (child.isMesh) {
             color = child.material.color;
             child.material = new THREE.MeshLambertMaterial({ color });
-            child.castShadow = true;
+            // child.castShadow = true;
         }
     });
 
@@ -152,7 +164,7 @@ function treeOnLoad(gltf) {
 
 function spreadTrees(tree) {
     const near = 0;
-    const far = 50;
+    const far = 300;
     const origin = new THREE.Vector3(0, 20, -200);
     const direction = new THREE.Vector3(0, -1, 0);
     const newPosition = new THREE.Vector3();
@@ -164,26 +176,28 @@ function spreadTrees(tree) {
     let offset = 25;
 
 
-    intersection = raycaster.intersectObject(terrain, true)
+    intersection = raycaster.intersectObject(plane, true)
+    console.log(intersection);
 
 
     while (treeCount < 120) {
         newPosition.set(
-            Math.sin(t) * 625,
-            0,
-            -470 + t + offset,
+            Math.sin(t) * 600 - 320,
+            far,
+            -500 + 1.2 * t + offset,
         );
         offset *= -1;
 
         raycaster.set(newPosition, direction);
 
-        intersection = raycaster.intersectObject(terrain, true)[0];
+        intersection = raycaster.intersectObjects([plane, mountains], true)[0];
+        console.log(intersection);
 
-        if (intersection) {
-            newPosition.y = intersection.distance * -1;
+        if (intersection && intersection.distance > 280) {
+            // newPosition.y = intersection.distance * -1;
 
             treeClone = tree.clone();
-            treeClone.position.copy(newPosition);
+            treeClone.position.copy(intersection.point);
             treeCount += 1;
 
             scene.add(treeClone);
@@ -201,7 +215,7 @@ function toggleInspectionMode() {
             toggleCockpitMode();
         }
 
-        terrain.visible = false;
+        mountains.visible = false;
         movementGroupPosition.copy(movementGroup.position);
         movementGroup.position.set(0, 0, 0)
         airPlaneRotation.copy(airplane.rotation);
@@ -212,7 +226,7 @@ function toggleInspectionMode() {
     else {
         trackballControls.enabled = false;
 
-        terrain.visible = true;
+        mountains.visible = true;
         movementGroup.position.copy(movementGroupPosition);
         airplane.rotation.copy(airPlaneRotation);
 
@@ -231,7 +245,7 @@ function toggleCockpitMode() {
         }
 
         airplane.add(cameraHolder);
-        cameraHolder.position.x = -0.25;
+        cameraHolder.position.x = -0.3;
         cameraHolder.position.y = 2.5;
         cameraHolder.position.z = -1 * cameraPosition.z + 0.8;
     }
