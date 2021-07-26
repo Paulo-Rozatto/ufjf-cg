@@ -3,19 +3,265 @@ import { TrackballControls } from '../build/jsm/controls/TrackballControls.js';
 import { GLTFLoader } from '../build/jsm/loaders/GLTFLoader.js';
 import {
     initRenderer,
+    InfoBox,
+    SecondaryBox,
     initCamera,
     onWindowResize,
     initDefaultLighting,
 } from "../libs/util/util.js";
+
 const scene = new THREE.Scene();    // Create main scene
 const renderer = initRenderer();    // View function in util/utils
 renderer.setClearColor(0x87ceeb)
 renderer.shadowMap.enabled = true;
-
+const infoBox = new SecondaryBox("");
 let inspectionMode = false;
+let start = false;
+var torusCount = 0;
+var sec = 0;
+
+var clock = new THREE.Clock();
+clock.autoStart = false;
+
+const time = clock.elapsedTime;
+const delta = clock.getDelta();
+const pipeSpline = new THREE.CatmullRomCurve3( [new THREE.Vector3(0, 15, -200), new THREE.Vector3(-60, 35, 106),
+    new THREE.Vector3(-109, 54, 665), new THREE.Vector3(-253, 57, 860),  new THREE.Vector3(-573, 65, 633),
+    new THREE.Vector3(-518, 58, 309), new THREE.Vector3(-240, 74, -154), new THREE.Vector3(-298, 62, -388),
+    new THREE.Vector3(-584, 62, -374), new THREE.Vector3(-655, 74, -97), new THREE.Vector3(89, 62, 355),
+    new THREE.Vector3(468, 62, 314), new THREE.Vector3(506, 74, 103), new THREE.Vector3(104, 5, -201), 
+ ]);
+let mesh, tubeGeometry;
+
+const materialPath = new THREE.MeshLambertMaterial( { color: 0xff00ff } );
+
+const wireframeMaterial = new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.3, wireframe: true, transparent: true } );
+
+function addTube() {
+
+	const extrudePath = pipeSpline;
+
+	tubeGeometry = new THREE.TubeGeometry( extrudePath, 100, 2, 2, false );
+
+	addGeometry( tubeGeometry );
+
+}
+    function addGeometry( geometry ) {
+
+	// 3D shape
+
+	mesh = new THREE.Mesh( geometry, materialPath );
+	const wireframe = new THREE.Mesh( geometry, wireframeMaterial );
+	mesh.add( wireframe );
+	parent.add( mesh );
+
+}
+parent = new THREE.Object3D();
+scene.add( parent );
+
+addTube();
+
+
+infoBox.changeMessage("Checkpoints: " + torusCount + "/14");
+
+function detectContact() {
+
+    if(movementGroup.position.x <= ring.position.x + 20 && movementGroup.position.x >= ring.position.x - 20 
+        && movementGroup.position.y <= ring.position.y + 15 && movementGroup.position.y >= ring.position.y - 15
+        && movementGroup.position.z <= ring.position.z + 7 && movementGroup.position.z >= ring.position.z - 7) {
+
+        switch(torusCount) {
+            case 0: {          
+                start = true;
+                torusCount = 1;
+                clock.autoStart = true;
+                ring.position.set(-60, 35, 106);
+                //posicionando o próximo torus
+                nextTorus.position.set(-109, 54, 665);
+                //posicionando o torus passado
+                checkedTorus.position.set(0, 15, -200)
+                checkedTorus.visible = true;
+                break;
+            }
+            case 1: {
+                torusCount = 2;
+                
+                ring.position.set(-109, 54, 665);
+
+                nextTorus.position.set(-253, 57, 860);
+                nextTorus.rotation.set(0, deg90, 0);
+
+                checkedTorus.position.set(-60, 35, 106);
+                break;
+            }
+            case 2: {
+                torusCount = 3;
+                
+                ring.position.set(-253, 57, 860);
+                ring.rotation.set(0, deg90, 0);
+
+                nextTorus.position.set(-573, 65, 633);
+                nextTorus.rotation.set(0, deg90/3, 0);          
+                
+                checkedTorus.position.set(-109, 54, 665);
+
+                break; 
+            }
+            case 3: {
+                torusCount = 4;
+                
+                ring.position.set(-573, 65, 633);
+                ring.rotation.set(0, deg90/3, 0);
+
+                nextTorus.position.set(-518, 58, 309);
+                nextTorus.rotation.set(0, deg90*4/3, 0);
+
+                checkedTorus.position.set(-253, 57, 860);
+                checkedTorus.rotation.set(0, deg90, 0);
+
+                break; 
+            }
+            case 4: {
+                torusCount = 5;
+                
+                ring.position.set(-518, 58, 309);
+                ring.rotation.set(0, -deg90, 0);
+                ring.rotation.set(0, -deg90/3, 0);
+
+                nextTorus.position.set(-240, 74, -154);
+                nextTorus.rotation.set(0, deg90*4/3, 0);
+
+                checkedTorus.position.set(-573, 65, 633);
+                checkedTorus.rotation.set(0, deg90/3, 0);
+
+                break; 
+            }
+            case 5: {
+                torusCount = 6;
+                
+                ring.position.set(-240, 74, -154);
+                ring.rotation.set(0, -deg90/3, 0);
+
+                nextTorus.position.set(-298, 62, -388);
+                nextTorus.rotation.set(0, deg90 / 3, 0);
+
+                checkedTorus.position.set(-518, 58, 309);
+                checkedTorus.rotation.set(0, -deg90, 0);
+                checkedTorus.rotation.set(0, -deg90/3, 0);
+
+                break; 
+            }
+            case 6: {
+                torusCount = 7;
+                
+                ring.position.set(-298, 62, -388);
+                ring.rotation.set(0, deg90 / 3, 0);
+
+                nextTorus.position.set(-584, 62, -374);
+                nextTorus.rotation.set(0, -deg90* 2/ 3, 0);
+
+                checkedTorus.position.set(-240, 74, -154);
+                checkedTorus.rotation.set(0, -deg90/3, 0);
+
+                break; 
+            }
+            case 7: {
+                torusCount = 8;
+                
+                ring.position.set(-584, 62, -374);
+                ring.rotation.set(0, -deg90*2/3, 0);
+
+                nextTorus.position.set(-655, 74, -97);
+                nextTorus.rotation.set(0, deg90* 2/ 3, 0);
+
+                checkedTorus.position.set(-298, 62, -388);
+                checkedTorus.rotation.set(0, deg90 / 3, 0);
+
+                break; 
+            }
+            case 8: {
+                torusCount = 9;
+               
+                ring.position.set(-655, 74, -97);
+                ring.rotation.set(0, deg90 * 2/3, 0);
+
+                nextTorus.position.set(89, 62, 355);
+                nextTorus.rotation.set(0, deg90, 0);
+
+                checkedTorus.position.set(-584, 62, -374);
+                checkedTorus.rotation.set(0, -deg90*2/3, 0);
+
+                break; 
+            }
+            case 9: {
+                torusCount = 10;
+                ring.position.set(89, 62, 355);
+                ring.rotation.set(0, deg90, 0);
+
+                nextTorus.position.set(468, 62, 314);
+                nextTorus.rotation.set(0, -deg90/3, 0);
+
+                checkedTorus.position.set(-655, 74, -97);
+                checkedTorus.rotation.set(0, deg90 * 2/3, 0);
+
+                break; 
+            }
+            case 10: {
+                torusCount = 11;
+
+                ring.position.set(468, 62, 314);
+                ring.rotation.set(0, -deg90/3, 0);
+
+                nextTorus.position.set(506, 74, 103);
+                nextTorus.rotation.set(0, deg90/3, 0);
+
+                checkedTorus.position.set(89, 62, 355);
+                checkedTorus.rotation.set(0, deg90, 0);
+
+                break; 
+            }
+            case 11: {
+                torusCount = 12;
+
+                ring.position.set(506, 74, 103);
+                ring.rotation.set(0, deg90/3, 0);
+
+                nextTorus.position.set(104, 5, -201);
+                nextTorus.rotation.set(0, deg90, 0);
+
+                checkedTorus.position.set(468, 62, 314);
+                checkedTorus.rotation.set(0, -deg90/3, 0);
+
+                break; 
+            }
+            case 12: {
+                torusCount = 13;
+                ring.position.set(104, 5, -201);
+                ring.rotation.set(0, deg90, 0);
+
+                nextTorus.visible = false;
+
+                checkedTorus.position.set(506, 74, 103);
+                checkedTorus.rotation.set(0, deg90/3, 0);
+
+                break; 
+            }
+            case 13: {
+                torusCount = 14;
+                ring.visible = false;
+                
+                clock.stop();
+                checkedTorus.position.set(104, 5, -201);
+                checkedTorus.rotation.set(0, deg90, 0);
+                break; 
+            }
+        }
+
+    }
+}
 
 const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
-const movementGroupPosition = new THREE.Vector3(0, 10, -350); // Salva posicao do grupo para voltar do modo inspecao
+const movementGroupPosition = new THREE.Vector3(0, -12, -350); // Salva posicao do grupo para voltar do modo inspecao
 movementGroup.position.copy(movementGroupPosition);
 scene.add(movementGroup);
 
@@ -164,7 +410,7 @@ function toggleInspectionMode() {
     if (inspectionMode) {
         terrain.visible = false;
         movementGroupPosition.copy(movementGroup.position);
-        movementGroup.position.set(0, 0, 0)
+        movementGroup.position.set(0, 1, 0)
         airPlaneRotation.copy(airplane.rotation);
         airplane.rotation.set(0, 0, 0);
         trackballControls.enabled = true;
@@ -182,7 +428,7 @@ function toggleInspectionMode() {
 
 const MAX_SPEED = 2; // velocidade escalar maxima
 const SCALAR_ACCELERATION = 0.025; //  aceleração escalar
-let speed = 0.5; // velocidade escalar
+let speed = 0; // velocidade escalar
 let linearVel = new THREE.Vector3(0, 0, 0); // vetor velocidade linear
 let angularVel = new THREE.Vector3(); // vetor velocidade angular
 
@@ -221,9 +467,13 @@ function onKeyDown(event) {
             angularVel.x = -SCALAR_ACCELERATION;
             break;
         };
+        case 'Enter': {
+            parent.visible = !parent.visible;
+            break;
+        }
     }
 }
-
+console.log(airplane.position)
 function onKeyUp(event) {
     switch (event.key) {
         case 'ArrowLeft':
@@ -254,21 +504,9 @@ function updatePosition() {
     movementGroup.position.add(linearVel);
 }
 
-// Listen window size changes
-window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
-window.addEventListener('keydown', onKeyDown, false);
-window.addEventListener('keyup', onKeyUp, false);
 
-render();
-function render() {
-    if (inspectionMode) {
-        trackballControls.update(); // Enable mouse movements
-    } else {
-        updatePosition();
-    }
-    requestAnimationFrame(render);
-    renderer.render(scene, camera) // Render scene
-}
+// Listen window size changes
+
 
 function buildAirplane() {
     const airplane = new THREE.Object3D();
@@ -378,5 +616,65 @@ function buildAirplane() {
     airplane.add(stabilizerVertical);
 
     scene.add(airplane);
+    //calculateCollisionPoints(airplane);
     return airplane;
+}
+
+//criação dos torus
+
+function createTorus() {
+    const geometry = new THREE.RingGeometry( 12, 15, 32 );
+    const material = new THREE.MeshBasicMaterial( { color: 0xffff00, side: THREE.DoubleSide, opacity: 5 } ); 
+    const torus = new THREE.Mesh( geometry, material );
+    return torus;
+}
+
+function createTorusChecekd() {
+    const geometry = new THREE.RingGeometry( 12, 15, 32 );
+    const material = new THREE.MeshBasicMaterial( { color: 	'#00FF00', side: THREE.DoubleSide,opacity: 0.0005 } ); 
+    const torus = new THREE.Mesh( geometry, material );
+    return torus;
+}
+
+function createTorusNext() {
+    const geometry = new THREE.RingGeometry( 12, 15, 32 );
+    const material = new THREE.MeshBasicMaterial( { color: 	'#FF0000', side: THREE.DoubleSide } ); 
+    const torus = new THREE.Mesh( geometry, material );
+    return torus;
+}
+
+const deg90 = Math.PI / 2;
+
+const ring = createTorus();
+scene.add( ring );
+console.log(ring.material.opacity)
+ring.position.set(0, 15, -200);
+
+const nextTorus = createTorusNext();
+scene.add(nextTorus);
+nextTorus.position.set(-60, 35, 106);
+
+const checkedTorus = createTorusChecekd();
+scene.add(checkedTorus);
+checkedTorus.visible = false;
+
+window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
+window.addEventListener('keydown', onKeyDown, false);
+window.addEventListener('keyup', onKeyUp, false);
+
+render();
+function render() {
+    if (inspectionMode) {
+        trackballControls.update(); // Enable mouse movements
+    } else {
+        updatePosition();
+    }
+    requestAnimationFrame(render);
+    renderer.render(scene, camera) // Render scene
+    detectContact();
+
+    if(start) {
+        sec = clock.getElapsedTime().toFixed(2);
+        infoBox.changeMessage("Checkpoints: " + torusCount + "/14 Time: " +  sec + "s");
+    }
 }
