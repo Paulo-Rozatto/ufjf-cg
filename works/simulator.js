@@ -1,6 +1,7 @@
 import * as THREE from '../build/three.module.js';
 import { TrackballControls } from '../build/jsm/controls/TrackballControls.js';
 import { GLTFLoader } from '../build/jsm/loaders/GLTFLoader.js';
+import { GLTFExporter } from '../build/jsm/exporters/GLTFExporter.js'
 import {
     initRenderer,
     onWindowResize,
@@ -8,7 +9,7 @@ import {
 const scene = new THREE.Scene();    // Create main scene
 const renderer = initRenderer();    // View function in util/utils
 renderer.setClearColor(0x87ceeb)
-renderer.shadowMap.enabled = true;
+// renderer.shadowMap.enabled = true;
 
 // Variaveis de modos de camera
 let inspectionMode = false, cockpitMode = false;
@@ -33,15 +34,15 @@ cameraHolder.add(camera);
 const trackballControls = new TrackballControls(camera, renderer.domElement);
 trackballControls.enabled = false;
 
-const light = new THREE.DirectionalLight(0xffffff, 1.2);
+const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(400, 300, -600);
 // light.castShadow = true;
 scene.add(light);
 
 const lightTarget = new THREE.Object3D();
 lightTarget.position.set(0, 0, 600);
-scene.add(lightTarget);
-light.target = lightTarget;
+// scene.add(lightTarget);
+// light.target = lightTarget;
 
 // light.shadow.camera.near = 100;
 // light.shadow.camera.far = 1500;
@@ -54,10 +55,10 @@ light.target.updateMatrixWorld();
 light.shadow.camera.updateProjectionMatrix();
 
 const cameraHelper = new THREE.CameraHelper(light.shadow.camera);
-scene.add(cameraHelper);
+// scene.add(cameraHelper);
 
 const helper = new THREE.DirectionalLightHelper(light, 5);
-scene.add(helper);
+// scene.add(helper);
 
 const hemisphereLight = new THREE.HemisphereLight(0xa7ceeb, 0x234423, 1.6);
 scene.add(hemisphereLight);
@@ -105,14 +106,23 @@ function airplaneOnLoad(gltf) {
 }
 
 //----- Load terrain source -----
-const plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(4000, 4000),
-    new THREE.MeshLambertMaterial({ color: 0x002D0B, })
-);
+let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow.png')
+lm.flipY = false;
+
+const groundGeo = new THREE.PlaneGeometry(4000, 4000);
+
+let uv1 = groundGeo.getAttribute('uv').array;
+groundGeo.setAttribute('uv2', new THREE.BufferAttribute(uv1, 2));
+
+const groundMat = new THREE.MeshLambertMaterial({ color: 0x001D0B, lightMap: lm });
+
+const plane = new THREE.Mesh(groundGeo, groundMat);
 plane.rotation.x = Math.PI * -0.5;
-plane.receiveShadow = true;
+// plane.receiveShadow = true;
 plane.position.y = 2.5;
 scene.add(plane);
+
+
 
 
 let mountains;
@@ -130,7 +140,7 @@ function mountainsOnLoad(gltf) {
 
             child.material = new THREE.MeshLambertMaterial({ color });
             // child.castShadow = true;
-            child.receiveShadow = true;
+            // child.receiveShadow = true;
         }
     });
     scene.add(mountains);
@@ -162,6 +172,38 @@ function treeOnLoad(gltf) {
     spreadTrees(tree1); // cria clones e espalha as arvores
 }
 
+function download() {
+    const exporter = new GLTFExporter();
+
+    // Parse the input and generate the glTF output
+    exporter.parse(scene, function (gltf) {
+        saveArrayBuffer(gltf, 'scene.glb');
+    }, {
+        binary: true
+    });
+}
+// download();
+
+function saveArrayBuffer(buffer, filename) {
+
+    save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
+
+}
+
+const link = document.createElement('a');
+link.style.display = 'none';
+document.body.appendChild(link); // Firefox workaround, see #6594
+
+function save(blob, filename) {
+
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+
+    // URL.revokeObjectURL( url ); breaks Firefox...
+
+}
+
 function spreadTrees(tree) {
     const near = 0;
     const far = 300;
@@ -172,13 +214,9 @@ function spreadTrees(tree) {
 
     let treeClone, treeCount = 0, t = 0;
     let intersection;
-
     let offset = 25;
 
-
     intersection = raycaster.intersectObject(plane, true)
-    console.log(intersection);
-
 
     while (treeCount < 120) {
         newPosition.set(
@@ -191,7 +229,6 @@ function spreadTrees(tree) {
         raycaster.set(newPosition, direction);
 
         intersection = raycaster.intersectObjects([plane, mountains], true)[0];
-        console.log(intersection);
 
         if (intersection && intersection.distance > 280) {
             // newPosition.y = intersection.distance * -1;
@@ -215,6 +252,7 @@ function toggleInspectionMode() {
             toggleCockpitMode();
         }
 
+        plane.visible = false;
         mountains.visible = false;
         movementGroupPosition.copy(movementGroup.position);
         movementGroup.position.set(0, 0, 0)
@@ -226,6 +264,7 @@ function toggleInspectionMode() {
     else {
         trackballControls.enabled = false;
 
+        plane.visible = true;
         mountains.visible = true;
         movementGroup.position.copy(movementGroupPosition);
         airplane.rotation.copy(airPlaneRotation);
