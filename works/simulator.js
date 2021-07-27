@@ -9,7 +9,7 @@ import {
 const scene = new THREE.Scene();    // Create main scene
 const renderer = initRenderer();    // View function in util/utils
 renderer.setClearColor(0x87ceeb)
-// renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = true;
 
 // Variaveis de modos de camera
 let inspectionMode = false, cockpitMode = false;
@@ -19,10 +19,13 @@ const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera 
 movementGroup.position.copy(movementGroupPosition);
 scene.add(movementGroup);
 
+const rotationGroup = new THREE.Group();
+movementGroup.add(rotationGroup);
+
 const cameraHolder = new THREE.Group(); // a função do cameraholder é fazer a camera acompanhar a rotação do avião no modo cockpit sem girar a camera diretamente
 const holderPosition = new THREE.Vector3(0, 10, 0);
 cameraHolder.position.copy(holderPosition);
-movementGroup.add(cameraHolder);
+rotationGroup.add(cameraHolder);
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 const cameraPosition = new THREE.Vector3(0, 0, -50);
@@ -36,29 +39,32 @@ trackballControls.enabled = false;
 
 const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(400, 300, -600);
-// light.castShadow = true;
-scene.add(light);
+// scene.add(light);
 
-const lightTarget = new THREE.Object3D();
-lightTarget.position.set(0, 0, 600);
-// scene.add(lightTarget);
-// light.target = lightTarget;
+const movingLight = new THREE.DirectionalLight(0xffffff, 1);
+movingLight.castShadow = true;
+movingLight.position.set(400, 300, -600);
 
-// light.shadow.camera.near = 100;
-// light.shadow.camera.far = 1500;
-// light.shadow.camera.left = -600;
-// light.shadow.camera.right = 900
-// light.shadow.camera.top = 300;
-// light.shadow.camera.bottom = -500;
+movingLight.shadow.mapSize.width = 1024; // default
+movingLight.shadow.mapSize.height = 1024; // default
+movingLight.shadow.camera.far = 1500;
+movingLight.shadow.camera.right = 100
+movingLight.shadow.camera.left = -100;
+movingLight.shadow.camera.top = 100;
+movingLight.shadow.camera.bottom = -100;
 
-light.target.updateMatrixWorld();
-light.shadow.camera.updateProjectionMatrix();
+const target = new THREE.Object3D();
+movementGroup.add(target);
 
-const cameraHelper = new THREE.CameraHelper(light.shadow.camera);
-// scene.add(cameraHelper);
+movingLight.target = target;
 
-const helper = new THREE.DirectionalLightHelper(light, 5);
-// scene.add(helper);
+movementGroup.add(movingLight);
+
+const cameraHelper = new THREE.CameraHelper(movingLight.shadow.camera);
+scene.add(cameraHelper);
+
+const helper = new THREE.DirectionalLightHelper(movingLight, 5);
+scene.add(helper);
 
 const hemisphereLight = new THREE.HemisphereLight(0xa7ceeb, 0x234423, 1.6);
 scene.add(hemisphereLight);
@@ -94,6 +100,8 @@ function airplaneOnLoad(gltf) {
             transparent = child.material.transparent;
             opacity = child.material.opacity;
 
+            child.castShadow = true;
+
             if (/cockpit/.test(child.name)) {
                 child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity, side: THREE.DoubleSide })
             }
@@ -102,11 +110,12 @@ function airplaneOnLoad(gltf) {
         }
     });
 
-    movementGroup.add(airplane);
+    rotationGroup.add(airplane);
 }
 
-//----- Load terrain source -----
-let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow.png')
+//-----Create ground plane -----
+
+let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow2.png')
 lm.flipY = false;
 
 const groundGeo = new THREE.PlaneGeometry(4000, 4000);
@@ -118,12 +127,11 @@ const groundMat = new THREE.MeshLambertMaterial({ color: 0x001D0B, lightMap: lm 
 
 const plane = new THREE.Mesh(groundGeo, groundMat);
 plane.rotation.x = Math.PI * -0.5;
-// plane.receiveShadow = true;
+plane.receiveShadow = true;
 plane.position.y = 2.5;
 scene.add(plane);
 
-
-
+//----- Load terrain source -----
 
 let mountains;
 
@@ -140,7 +148,7 @@ function mountainsOnLoad(gltf) {
 
             child.material = new THREE.MeshLambertMaterial({ color });
             // child.castShadow = true;
-            // child.receiveShadow = true;
+            child.receiveShadow = true;
         }
     });
     scene.add(mountains);
@@ -165,43 +173,11 @@ function treeOnLoad(gltf) {
         if (child.isMesh) {
             color = child.material.color;
             child.material = new THREE.MeshLambertMaterial({ color });
-            // child.castShadow = true;
+            child.castShadow = true;
         }
     });
 
     spreadTrees(tree1); // cria clones e espalha as arvores
-}
-
-function download() {
-    const exporter = new GLTFExporter();
-
-    // Parse the input and generate the glTF output
-    exporter.parse(scene, function (gltf) {
-        saveArrayBuffer(gltf, 'scene.glb');
-    }, {
-        binary: true
-    });
-}
-// download();
-
-function saveArrayBuffer(buffer, filename) {
-
-    save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
-
-}
-
-const link = document.createElement('a');
-link.style.display = 'none';
-document.body.appendChild(link); // Firefox workaround, see #6594
-
-function save(blob, filename) {
-
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
-
-    // URL.revokeObjectURL( url ); breaks Firefox...
-
 }
 
 function spreadTrees(tree) {
@@ -368,11 +344,11 @@ function updatePosition() {
         airplane.rotation.z += angularVel.z - 0.025 * Math.sin(airplane.rotation.z);
         airplane.rotation.x += angularVel.x - 0.025 * Math.sin(airplane.rotation.x);
 
-        movementGroup.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.015;
+        rotationGroup.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.015;
 
-        linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(movementGroup.rotation.y);
+        linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(rotationGroup.rotation.y);
         linearVel.y = speed * -Math.sin(airplane.rotation.x);
-        linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(movementGroup.rotation.y);
+        linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(rotationGroup.rotation.y);
 
         movementGroup.position.add(linearVel);
     }
@@ -392,4 +368,37 @@ function render() {
     }
     requestAnimationFrame(render);
     renderer.render(scene, camera) // Render scene
+}
+
+// --------- Auxilar code to export scene ---------------
+function download() {
+    const exporter = new GLTFExporter();
+
+    // Parse the input and generate the glTF output
+    exporter.parse(scene, function (gltf) {
+        saveArrayBuffer(gltf, 'scene.glb');
+    }, {
+        binary: true
+    });
+}
+// download();
+
+function saveArrayBuffer(buffer, filename) {
+
+    save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
+
+}
+
+const link = document.createElement('a');
+link.style.display = 'none';
+document.body.appendChild(link); // Firefox workaround, see #6594
+
+function save(blob, filename) {
+
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+
+    // URL.revokeObjectURL( url ); breaks Firefox...
+
 }
