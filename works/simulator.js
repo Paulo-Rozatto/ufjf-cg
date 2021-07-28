@@ -4,18 +4,281 @@ import { GLTFLoader } from '../build/jsm/loaders/GLTFLoader.js';
 import { GLTFExporter } from '../build/jsm/exporters/GLTFExporter.js'
 import {
     initRenderer,
+    InfoBox,
+    SecondaryBox,
+    initCamera,
     onWindowResize,
 } from "../libs/util/util.js";
+
 const scene = new THREE.Scene();    // Create main scene
 const renderer = initRenderer();    // View function in util/utils
 renderer.setClearColor(0x87ceeb)
 renderer.shadowMap.enabled = true;
 
-// Variaveis de modos de camera
-let inspectionMode = false, cockpitMode = false;
+const infoBox = new SecondaryBox("");
 
-const movementGroupPosition = new THREE.Vector3(0, 10, -350); // Salva posicao do grupo para voltar do modo inspecao
+let inspectionMode = false;
+let cockpitMode = false;
+
+let start = false;
+var torusCount = 0;
+var sec = 0;
+
+var clock = new THREE.Clock();
+clock.autoStart = false;
+
+const time = clock.elapsedTime;
+const delta = clock.getDelta();
+
+const points = [
+    new THREE.Vector3(-130, 95, -200),
+    new THREE.Vector3(-190, 115, 106),
+    new THREE.Vector3(-239, 134, 665),
+    new THREE.Vector3(-383, 137, 860),
+    new THREE.Vector3(-703, 145, 633),
+    new THREE.Vector3(-648, 138, 309),
+    new THREE.Vector3(-370, 154, -154),
+    new THREE.Vector3(-428, 142, -388),
+    new THREE.Vector3(-714, 142, -374),
+    new THREE.Vector3(-785, 154, -97),
+    new THREE.Vector3(-41, 142, 355),
+    new THREE.Vector3(338, 142, 314),
+    new THREE.Vector3(376, 154, 103),
+    new THREE.Vector3(-26, 85, -201)
+]
+
+const pipeSpline = new THREE.CatmullRomCurve3(points);
+let mesh, tubeGeometry;
+
+const materialPath = new THREE.MeshLambertMaterial({ color: 0xff00ff });
+
+const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.3, wireframe: true, transparent: true });
+
+function addTube() {
+
+    const extrudePath = pipeSpline;
+
+    tubeGeometry = new THREE.TubeGeometry(extrudePath, 100, 2, 2, false);
+
+    addGeometry(tubeGeometry);
+
+}
+function addGeometry(geometry) {
+
+    // 3D shape
+
+    mesh = new THREE.Mesh(geometry, materialPath);
+    const wireframe = new THREE.Mesh(geometry, wireframeMaterial);
+    mesh.add(wireframe);
+    parent.add(mesh);
+
+}
+parent = new THREE.Object3D();
+scene.add(parent);
+
+addTube();
+
+
+infoBox.changeMessage("Checkpoints: " + torusCount + "/14");
+
+function detectContact() {
+
+    if (movementGroup.position.x <= ring.position.x + 20 && movementGroup.position.x >= ring.position.x - 20
+        && movementGroup.position.y <= ring.position.y + 15 && movementGroup.position.y >= ring.position.y - 15
+        && movementGroup.position.z <= ring.position.z + 7 && movementGroup.position.z >= ring.position.z - 7) {
+
+        switch (torusCount) {
+            case 0: {
+                start = true;
+                torusCount = 1;
+                clock.autoStart = true;
+                ring.position.copy(points[torusCount])
+                //posicionando o próximo torus
+                nextTorus.position.copy(points[torusCount + 1])
+                //posicionando o torus passado
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.visible = true;
+                break;
+            }
+            case 1: {
+                torusCount = 2;
+
+                ring.position.copy(points[torusCount])
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, deg90, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                break;
+            }
+            case 2: {
+                torusCount = 3;
+
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, deg90, 0);
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, deg90 / 3, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+
+                break;
+            }
+            case 3: {
+                torusCount = 4;
+
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, deg90 / 3, 0);
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, deg90 * 4 / 3, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, deg90, 0);
+
+                break;
+            }
+            case 4: {
+                torusCount = 5;
+
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, -deg90, 0);
+                ring.rotation.set(0, -deg90 / 3, 0);
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, deg90 * 4 / 3, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, deg90 / 3, 0);
+
+                break;
+            }
+            case 5: {
+                torusCount = 6;
+
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, -deg90 / 3, 0);
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, deg90 / 3, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, -deg90, 0);
+                checkedTorus.rotation.set(0, -deg90 / 3, 0);
+
+                break;
+            }
+            case 6: {
+                torusCount = 7;
+
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, deg90 / 3, 0);
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, -deg90 * 2 / 3, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, -deg90 / 3, 0);
+
+                break;
+            }
+            case 7: {
+                torusCount = 8;
+
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, -deg90 * 2 / 3, 0);
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, deg90 * 2 / 3, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, deg90 / 3, 0);
+
+                break;
+            }
+            case 8: {
+                torusCount = 9;
+
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, deg90 * 2 / 3, 0);
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, deg90, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, -deg90 * 2 / 3, 0);
+
+                break;
+            }
+            case 9: {
+                torusCount = 10;
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, deg90, 0);
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, -deg90 / 3, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, deg90 * 2 / 3, 0);
+
+                break;
+            }
+            case 10: {
+                torusCount = 11;
+
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, -deg90 / 3, 0);
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, deg90 / 3, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, deg90, 0);
+
+                break;
+            }
+            case 11: {
+                torusCount = 12;
+
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, deg90 / 3, 0);
+
+                nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, deg90, 0);
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, -deg90 / 3, 0);
+
+                break;
+            }
+            case 12: {
+                torusCount = 13;
+                ring.position.copy(points[torusCount])
+                ring.rotation.set(0, deg90, 0);
+
+                nextTorus.visible = false;
+
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, deg90 / 3, 0);
+
+                break;
+            }
+            case 13: {
+                torusCount = 14;
+                ring.visible = false;
+
+                clock.stop();
+                checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, deg90, 0);
+                break;
+            }
+        }
+
+    }
+}
+
 const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
+const movementGroupPosition = new THREE.Vector3(-130, 2.5, -550); // Salva posicao do grupo para voltar do modo inspecao
 movementGroup.position.copy(movementGroupPosition);
 scene.add(movementGroup);
 
@@ -39,7 +302,7 @@ trackballControls.enabled = false;
 
 const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(400, 300, -600);
-// scene.add(light);
+scene.add(light);
 
 const movingLight = new THREE.DirectionalLight(0xffffff, 1);
 movingLight.castShadow = true;
@@ -231,7 +494,7 @@ function toggleInspectionMode() {
         plane.visible = false;
         mountains.visible = false;
         movementGroupPosition.copy(movementGroup.position);
-        movementGroup.position.set(0, 0, 0)
+        movementGroup.position.set(0, 1, 0)
         airPlaneRotation.copy(airplane.rotation);
         airplane.rotation.set(0, 0, 0);
 
@@ -275,7 +538,7 @@ function toggleCockpitMode() {
 
 const MAX_SPEED = 2; // velocidade escalar maxima
 const SCALAR_ACCELERATION = 0.025; //  aceleração escalar
-let speed = 0.5; // velocidade escalar
+let speed = 0; // velocidade escalar
 let linearVel = new THREE.Vector3(0, 0, 0); // vetor velocidade linear
 let angularVel = new THREE.Vector3(); // vetor velocidade angular
 
@@ -318,6 +581,10 @@ function onKeyDown(event) {
             angularVel.x = -SCALAR_ACCELERATION;
             break;
         };
+        case 'Enter': {
+            parent.visible = !parent.visible;
+            break;
+        }
     }
 }
 
@@ -354,7 +621,44 @@ function updatePosition() {
     }
 }
 
-// Listen window size changes
+//criação dos torus
+
+function createTorus() {
+    const geometry = new THREE.RingGeometry(12, 15, 32);
+    const material = new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide, opacity: 5 });
+    const torus = new THREE.Mesh(geometry, material);
+    return torus;
+}
+
+function createTorusChecekd() {
+    const geometry = new THREE.RingGeometry(12, 15, 32);
+    const material = new THREE.MeshBasicMaterial({ color: '#00FF00', side: THREE.DoubleSide, opacity: 0.0005 });
+    const torus = new THREE.Mesh(geometry, material);
+    return torus;
+}
+
+function createTorusNext() {
+    const geometry = new THREE.RingGeometry(12, 15, 32);
+    const material = new THREE.MeshBasicMaterial({ color: '#FF0000', side: THREE.DoubleSide });
+    const torus = new THREE.Mesh(geometry, material);
+    return torus;
+}
+
+const deg90 = Math.PI / 2;
+
+const ring = createTorus();
+scene.add(ring);
+console.log(ring.material.opacity)
+ring.position.copy(points[torusCount])
+
+const nextTorus = createTorusNext();
+scene.add(nextTorus);
+nextTorus.position.copy(points[torusCount + 1])
+
+const checkedTorus = createTorusChecekd();
+scene.add(checkedTorus);
+checkedTorus.visible = false;
+
 window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
 window.addEventListener('keydown', onKeyDown, false);
 window.addEventListener('keyup', onKeyUp, false);
@@ -368,37 +672,10 @@ function render() {
     }
     requestAnimationFrame(render);
     renderer.render(scene, camera) // Render scene
-}
+    detectContact();
 
-// --------- Auxilar code to export scene ---------------
-function download() {
-    const exporter = new GLTFExporter();
-
-    // Parse the input and generate the glTF output
-    exporter.parse(scene, function (gltf) {
-        saveArrayBuffer(gltf, 'scene.glb');
-    }, {
-        binary: true
-    });
-}
-// download();
-
-function saveArrayBuffer(buffer, filename) {
-
-    save(new Blob([buffer], { type: 'application/octet-stream' }), filename);
-
-}
-
-const link = document.createElement('a');
-link.style.display = 'none';
-document.body.appendChild(link); // Firefox workaround, see #6594
-
-function save(blob, filename) {
-
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
-
-    // URL.revokeObjectURL( url ); breaks Firefox...
-
+    if (start) {
+        sec = clock.getElapsedTime().toFixed(2);
+        infoBox.changeMessage("Checkpoints: " + torusCount + "/14 Time: " + sec + "s");
+    }
 }
