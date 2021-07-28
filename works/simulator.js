@@ -14,18 +14,109 @@ const renderer = initRenderer();    // View function in util/utils
 renderer.setClearColor(0x87ceeb)
 renderer.shadowMap.enabled = true;
 
-const infoBox = new SecondaryBox("");
+// ---------------------------------------- //
+// ---------- Variaveis Globais ---------- //
+// ---------------------------------------- //
 
+let start = false;
 let inspectionMode = false;
 let cockpitMode = false;
 
-let start = false;
-var torusCount = 0;
-var sec = 0;
-
-var clock = new THREE.Clock();
+const clock = new THREE.Clock();
 clock.autoStart = false;
 
+let torusCount = 0;
+let sec = 0;
+
+// ----------------------------------------------------- //
+// ---------- Declareção dos objetos da cena ---------- //
+// --------------------------------------------------- //
+
+const infoBox = new SecondaryBox("Checkpoints: " + torusCount + "/14");
+
+// -- Criação de grupos que auxiliam a movimentação e rotação --
+const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
+const movementGroupPosition = new THREE.Vector3(-130, 2.5, -550); // Salva posicao do grupo para voltar do modo inspecao
+movementGroup.position.copy(movementGroupPosition);
+scene.add(movementGroup);
+
+const rotationGroup = new THREE.Group();
+movementGroup.add(rotationGroup);
+
+const cameraHolder = new THREE.Group(); // a função do cameraholder é fazer a camera acompanhar a rotação do avião no modo cockpit sem girar a camera diretamente
+const holderPosition = new THREE.Vector3(0, 10, 0);
+cameraHolder.position.copy(holderPosition);
+rotationGroup.add(cameraHolder);
+
+// -- Criação da camera --
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+const cameraPosition = new THREE.Vector3(0, 0, -50);
+camera.position.copy(cameraPosition);
+camera.lookAt(movementGroupPosition);
+cameraHolder.add(camera);
+
+// -- Trackball controls para o modo inspeção --
+const trackballControls = new TrackballControls(camera, renderer.domElement);
+trackballControls.enabled = false;
+
+// -- Criação das luzes --
+const hemisphereLight = new THREE.HemisphereLight(0xa7ceeb, 0x234423, 1.6);
+scene.add(hemisphereLight);
+
+const light = new THREE.DirectionalLight(0xffffff, 1); // Luz padrão
+light.position.set(400, 300, -600);
+scene.add(light);
+
+// Luz que acompanha o avião para projetar sua sombra e das árvores próximas
+const movingLight = new THREE.DirectionalLight(0xffffff, 1);
+movingLight.castShadow = true;
+movingLight.position.set(400, 300, -600);
+
+movingLight.shadow.mapSize.width = 1024; // default
+movingLight.shadow.mapSize.height = 1024; // default
+movingLight.shadow.camera.far = 1500;
+movingLight.shadow.camera.right = 100
+movingLight.shadow.camera.left = -100;
+movingLight.shadow.camera.top = 100;
+movingLight.shadow.camera.bottom = -100;
+
+const target = new THREE.Object3D();
+movementGroup.add(target);
+
+movingLight.target = target;
+
+movementGroup.add(movingLight);
+
+const cameraHelper = new THREE.CameraHelper(movingLight.shadow.camera);
+// scene.add(cameraHelper);
+
+const helper = new THREE.DirectionalLightHelper(movingLight, 5);
+// scene.add(helper);
+
+
+// -- Lightmap das sombras das árvores --
+let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow2.png')
+lm.flipY = false;
+
+// -- Criação do chão --
+const groundGeo = new THREE.PlaneGeometry(4000, 4000);
+const groundMat = new THREE.MeshLambertMaterial({ color: 0x001D0B, lightMap: lm });
+
+// Cria um segundo array de UVs para funcionar o lightmap
+let uv1 = groundGeo.getAttribute('uv').array;
+groundGeo.setAttribute('uv2', new THREE.BufferAttribute(uv1, 2));
+
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = Math.PI * -0.5;
+ground.receiveShadow = true;
+ground.position.y = 2.5;
+scene.add(ground);
+
+// Criação do caminho usando tube geometry
+parent = new THREE.Object3D();
+scene.add(parent);
+
+// Vetor de pontos para a curva CatmullRoll e para a posicao dos torus
 const points = [
     new THREE.Vector3(-130, 95, -200),
     new THREE.Vector3(-190, 115, 106),
@@ -41,42 +132,269 @@ const points = [
     new THREE.Vector3(338, 142, 314),
     new THREE.Vector3(376, 154, 103),
     new THREE.Vector3(-26, 85, -201)
-]
+];
 
 const pipeSpline = new THREE.CatmullRomCurve3(points);
-let mesh, tubeGeometry;
-
-const materialPath = new THREE.MeshLambertMaterial({ color: 0xff00ff });
+const tubeGeometry = new THREE.TubeGeometry(pipeSpline, 100, 2, 2, false);
+const tubeMaterial = new THREE.MeshLambertMaterial({ color: 0xff00ff });
+const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+parent.add(tube);
 
 const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.3, wireframe: true, transparent: true });
+const wireframe = new THREE.Mesh(tubeGeometry, wireframeMaterial);
+tube.add(wireframe);
 
-function addTube() {
-
-    const extrudePath = pipeSpline;
-
-    tubeGeometry = new THREE.TubeGeometry(extrudePath, 100, 2, 2, false);
-
-    addGeometry(tubeGeometry);
-
+// Criação dos torus
+function createTorus() {
+    const geometry = new THREE.RingGeometry(12, 15, 32);
+    const material = new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide, opacity: 5 });
+    const torus = new THREE.Mesh(geometry, material);
+    return torus;
 }
 
-function addGeometry(geometry) {
-
-    // 3D shape
-
-    mesh = new THREE.Mesh(geometry, materialPath);
-    const wireframe = new THREE.Mesh(geometry, wireframeMaterial);
-    mesh.add(wireframe);
-    parent.add(mesh);
-
+function createTorusChecekd() {
+    const geometry = new THREE.RingGeometry(12, 15, 32);
+    const material = new THREE.MeshBasicMaterial({ color: '#00FF00', side: THREE.DoubleSide, opacity: 0.0005 });
+    const torus = new THREE.Mesh(geometry, material);
+    return torus;
 }
-parent = new THREE.Object3D();
-scene.add(parent);
 
-addTube();
+function createTorusNext() {
+    const geometry = new THREE.RingGeometry(12, 15, 32);
+    const material = new THREE.MeshBasicMaterial({ color: '#FF0000', side: THREE.DoubleSide });
+    const torus = new THREE.Mesh(geometry, material);
+    return torus;
+}
+
+const deg90 = Math.PI / 2;
+
+const ring = createTorus();
+scene.add(ring);
+console.log(ring.material.opacity)
+ring.position.copy(points[torusCount])
+
+const nextTorus = createTorusNext();
+scene.add(nextTorus);
+nextTorus.position.copy(points[torusCount + 1])
+
+const checkedTorus = createTorusChecekd();
+scene.add(checkedTorus);
+checkedTorus.visible = false;
 
 
-infoBox.changeMessage("Checkpoints: " + torusCount + "/14");
+// ------------------------------------------------------- //
+// ---------- Carregamento de objetos externos ---------- //
+// ----------------------------------------------------- //
+const loader = new GLTFLoader();
+
+// Callbacks em comum do carregamento de objetos
+function onProgress(xhr) { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); }
+function onError(error) { console.error('An error happened', error); }
+
+// Carregamento do modelo do avião
+let airplane
+let airPlaneRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
+
+loader.load('assets/airplane.glb', airplaneOnLoad, onProgress, onError);
+
+function airplaneOnLoad(gltf) {
+    airplane = gltf.scene;
+
+    // Converte o MeshStandardMaterial para MeshPhongMaterial
+    let color, transparent, opacity;
+    airplane.traverse((child) => {
+        if (child.isMesh) {
+
+            color = child.material.color;
+            transparent = child.material.transparent;
+            opacity = child.material.opacity;
+
+            child.castShadow = true;
+
+            if (/cockpit/.test(child.name)) {
+                child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity, side: THREE.DoubleSide })
+            }
+            else
+                child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity })
+        }
+    });
+
+    rotationGroup.add(airplane);
+}
+
+// Carregamento das montanhas
+let mountains;
+
+loader.load('assets/terrain3.glb', mountainsOnLoad, onProgress, onError)
+
+function mountainsOnLoad(gltf) {
+    let color;
+    mountains = gltf.scene;
+
+    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
+    mountains.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+
+            child.material = new THREE.MeshLambertMaterial({ color });
+            // child.castShadow = true;
+            child.receiveShadow = true;
+        }
+    });
+    scene.add(mountains);
+
+    // O carregamento das arvores esta sendo chamado nesse callback porque o terrno precisa estar carregado e adcionado na cena para posicionar
+    // as arvores corretamente
+    // apesar de scene.add() ser uma função síncrona, o modelo demora um pouco a ser realmente adcionado na cena, entao precisa do timeout para compensar o delay
+    window.setTimeout(
+        () => { loader.load('assets/tree1.glb', treeOnLoad, onProgress, onError); },
+        500
+    );
+}
+
+// Carregamento do modelo da árvore
+let tree1;
+function treeOnLoad(gltf) {
+    tree1 = gltf.scene;
+
+    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
+    let color;
+    tree1.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+            child.material = new THREE.MeshLambertMaterial({ color });
+            child.castShadow = true;
+        }
+    });
+
+    spreadTrees(tree1); // cria clones e espalha as arvores
+}
+
+function spreadTrees(tree) {
+    const near = 0;
+    const far = 300;
+    const origin = new THREE.Vector3(0, 20, -200);
+    const direction = new THREE.Vector3(0, -1, 0);
+    const newPosition = new THREE.Vector3();
+    const raycaster = new THREE.Raycaster(origin, direction, near, far);
+
+    let treeClone, treeCount = 0, t = 0;
+    let intersection;
+    let offset = 25;
+
+    intersection = raycaster.intersectObject(ground, true)
+
+    while (treeCount < 120) {
+        newPosition.set(
+            Math.sin(t) * 600 - 320,
+            far,
+            -500 + 1.2 * t + offset,
+        );
+        offset *= -1;
+
+        raycaster.set(newPosition, direction);
+
+        intersection = raycaster.intersectObjects([ground, mountains], true)[0];
+
+        if (intersection && intersection.distance > 280) {
+            // newPosition.y = intersection.distance * -1;
+
+            treeClone = tree.clone();
+            treeClone.position.copy(intersection.point);
+            treeCount += 1;
+
+            scene.add(treeClone);
+        }
+        t += 7;
+
+    }
+}
+
+/// ----------------------------------------------- //
+// ---------- Funções de modo de câmera ---------- //
+// ---------------------------------------------- //
+
+function toggleInspectionMode() {
+    inspectionMode = !inspectionMode;
+
+    if (inspectionMode) {
+        if (cockpitMode) {
+            toggleCockpitMode();
+        }
+
+        ground.visible = false;
+        mountains.visible = false;
+        movementGroupPosition.copy(movementGroup.position);
+        movementGroup.position.set(0, 1, 0)
+        airPlaneRotation.copy(airplane.rotation);
+        airplane.rotation.set(0, 0, 0);
+
+        trackballControls.enabled = true;
+    }
+    else {
+        trackballControls.enabled = false;
+
+        ground.visible = true;
+        mountains.visible = true;
+        movementGroup.position.copy(movementGroupPosition);
+        airplane.rotation.copy(airPlaneRotation);
+
+        camera.up.set(0, 1, 0);
+        camera.position.copy(cameraPosition)
+        camera.lookAt(movementGroupPosition);
+    }
+}
+
+function toggleCockpitMode() {
+    cockpitMode = !cockpitMode;
+
+    if (cockpitMode) {
+        if (inspectionMode) {
+            toggleInspectionMode();
+        }
+
+        airplane.add(cameraHolder);
+        cameraHolder.position.x = -0.3;
+        cameraHolder.position.y = 2.5;
+        cameraHolder.position.z = -1 * cameraPosition.z + 0.8;
+    }
+    else {
+        rotationGroup.add(cameraHolder);
+
+        cameraHolder.position.copy(holderPosition);
+        camera.up.set(0, 1, 0);
+        camera.position.copy(cameraPosition)
+    }
+}
+
+/// ---------------------------------- //
+// ---------- Movimentação ---------- //
+// --------------------------------- //
+
+const MAX_SPEED = 2; // velocidade escalar maxima
+const SCALAR_ACCELERATION = 0.025; //  aceleração escalar
+let speed = 0; // velocidade escalar
+let linearVel = new THREE.Vector3(0, 0, 0); // vetor velocidade linear
+let angularVel = new THREE.Vector3(); // vetor velocidade angular
+
+
+function updatePosition() {
+    // testa se o modelo ja esta carreagado
+    if (airplane) {
+        // rotacao += velocidade angular - contrapeso
+        // o contrapeso multiplicado pelo seno faz o comportamento de limitar a rotacao e volta-la ao inicial
+        airplane.rotation.z += angularVel.z - 0.025 * Math.sin(airplane.rotation.z);
+        airplane.rotation.x += angularVel.x - 0.025 * Math.sin(airplane.rotation.x);
+
+        rotationGroup.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.015;
+
+        linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(rotationGroup.rotation.y);
+        linearVel.y = speed * -Math.sin(airplane.rotation.x);
+        linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(rotationGroup.rotation.y);
+
+        movementGroup.position.add(linearVel);
+    }
+}
 
 function detectContact() {
 
@@ -274,271 +592,12 @@ function detectContact() {
     }
 }
 
-const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
-const movementGroupPosition = new THREE.Vector3(-130, 2.5, -550); // Salva posicao do grupo para voltar do modo inspecao
-movementGroup.position.copy(movementGroupPosition);
-scene.add(movementGroup);
-
-const rotationGroup = new THREE.Group();
-movementGroup.add(rotationGroup);
-
-const cameraHolder = new THREE.Group(); // a função do cameraholder é fazer a camera acompanhar a rotação do avião no modo cockpit sem girar a camera diretamente
-const holderPosition = new THREE.Vector3(0, 10, 0);
-cameraHolder.position.copy(holderPosition);
-rotationGroup.add(cameraHolder);
-
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-const cameraPosition = new THREE.Vector3(0, 0, -50);
-camera.position.copy(cameraPosition);
-camera.lookAt(movementGroupPosition);
-cameraHolder.add(camera);
-
-
-const trackballControls = new TrackballControls(camera, renderer.domElement);
-trackballControls.enabled = false;
-
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(400, 300, -600);
-scene.add(light);
-
-const movingLight = new THREE.DirectionalLight(0xffffff, 1);
-movingLight.castShadow = true;
-movingLight.position.set(400, 300, -600);
-
-movingLight.shadow.mapSize.width = 1024; // default
-movingLight.shadow.mapSize.height = 1024; // default
-movingLight.shadow.camera.far = 1500;
-movingLight.shadow.camera.right = 100
-movingLight.shadow.camera.left = -100;
-movingLight.shadow.camera.top = 100;
-movingLight.shadow.camera.bottom = -100;
-
-const target = new THREE.Object3D();
-movementGroup.add(target);
-
-movingLight.target = target;
-
-movementGroup.add(movingLight);
-
-const cameraHelper = new THREE.CameraHelper(movingLight.shadow.camera);
-scene.add(cameraHelper);
-
-const helper = new THREE.DirectionalLightHelper(movingLight, 5);
-scene.add(helper);
-
-const hemisphereLight = new THREE.HemisphereLight(0xa7ceeb, 0x234423, 1.6);
-scene.add(hemisphereLight);
-
-//----- Loader and shared loading helper functions -----
-
-const loader = new GLTFLoader();
-
-function onProgress(xhr) {
-    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-}
-
-function onError(error) {
-    console.error('An error happened', error);
-}
-
-//----- Load airplane ------
-
-let airplane
-let airPlaneRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
-
-loader.load('assets/airplane.glb', airplaneOnLoad, onProgress, onError);
-
-function airplaneOnLoad(gltf) {
-    airplane = gltf.scene;
-
-    // Converte o MeshStandardMaterial para MeshPhongMaterial
-    let color, transparent, opacity;
-    airplane.traverse((child) => {
-        if (child.isMesh) {
-
-            color = child.material.color;
-            transparent = child.material.transparent;
-            opacity = child.material.opacity;
-
-            child.castShadow = true;
-
-            if (/cockpit/.test(child.name)) {
-                child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity, side: THREE.DoubleSide })
-            }
-            else
-                child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity })
-        }
-    });
-
-    rotationGroup.add(airplane);
-}
-
-//-----Create ground plane -----
-
-let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow2.png')
-lm.flipY = false;
-
-const groundGeo = new THREE.PlaneGeometry(4000, 4000);
-
-let uv1 = groundGeo.getAttribute('uv').array;
-groundGeo.setAttribute('uv2', new THREE.BufferAttribute(uv1, 2));
-
-const groundMat = new THREE.MeshLambertMaterial({ color: 0x001D0B, lightMap: lm });
-
-const plane = new THREE.Mesh(groundGeo, groundMat);
-plane.rotation.x = Math.PI * -0.5;
-plane.receiveShadow = true;
-plane.position.y = 2.5;
-scene.add(plane);
-
-//----- Load terrain source -----
-
-let mountains;
-
-loader.load('assets/terrain3.glb', mountainsOnLoad, onProgress, onError)
-
-function mountainsOnLoad(gltf) {
-    let color;
-    mountains = gltf.scene;
-
-    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
-    mountains.traverse((child) => {
-        if (child.isMesh) {
-            color = child.material.color;
-
-            child.material = new THREE.MeshLambertMaterial({ color });
-            // child.castShadow = true;
-            child.receiveShadow = true;
-        }
-    });
-    scene.add(mountains);
-
-    // O carregamento das arvores esta sendo chamado nesse callback porque o terrno precisa estar carregado e adcionado na cena para posicionar
-    // as arvores corretamente
-    // apesar de scene.add() ser uma função síncrona, o modelo demora um pouco a ser realmente adcionado na cena, entao precisa do timeout para compensar o delay
-    window.setTimeout(
-        () => { loader.load('assets/tree1.glb', treeOnLoad, onProgress, onError); },
-        500
-    );
-}
-
-let tree1;
-
-function treeOnLoad(gltf) {
-    tree1 = gltf.scene;
-
-    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
-    let color;
-    tree1.traverse((child) => {
-        if (child.isMesh) {
-            color = child.material.color;
-            child.material = new THREE.MeshLambertMaterial({ color });
-            child.castShadow = true;
-        }
-    });
-
-    spreadTrees(tree1); // cria clones e espalha as arvores
-}
-
-function spreadTrees(tree) {
-    const near = 0;
-    const far = 300;
-    const origin = new THREE.Vector3(0, 20, -200);
-    const direction = new THREE.Vector3(0, -1, 0);
-    const newPosition = new THREE.Vector3();
-    const raycaster = new THREE.Raycaster(origin, direction, near, far);
-
-    let treeClone, treeCount = 0, t = 0;
-    let intersection;
-    let offset = 25;
-
-    intersection = raycaster.intersectObject(plane, true)
-
-    while (treeCount < 120) {
-        newPosition.set(
-            Math.sin(t) * 600 - 320,
-            far,
-            -500 + 1.2 * t + offset,
-        );
-        offset *= -1;
-
-        raycaster.set(newPosition, direction);
-
-        intersection = raycaster.intersectObjects([plane, mountains], true)[0];
-
-        if (intersection && intersection.distance > 280) {
-            // newPosition.y = intersection.distance * -1;
-
-            treeClone = tree.clone();
-            treeClone.position.copy(intersection.point);
-            treeCount += 1;
-
-            scene.add(treeClone);
-        }
-        t += 7;
-
-    }
-}
-
-function toggleInspectionMode() {
-    inspectionMode = !inspectionMode;
-
-    if (inspectionMode) {
-        if (cockpitMode) {
-            toggleCockpitMode();
-        }
-
-        plane.visible = false;
-        mountains.visible = false;
-        movementGroupPosition.copy(movementGroup.position);
-        movementGroup.position.set(0, 1, 0)
-        airPlaneRotation.copy(airplane.rotation);
-        airplane.rotation.set(0, 0, 0);
-
-        trackballControls.enabled = true;
-    }
-    else {
-        trackballControls.enabled = false;
-
-        plane.visible = true;
-        mountains.visible = true;
-        movementGroup.position.copy(movementGroupPosition);
-        airplane.rotation.copy(airPlaneRotation);
-
-        camera.up.set(0, 1, 0);
-        camera.position.copy(cameraPosition)
-        camera.lookAt(movementGroupPosition);
-    }
-}
-
-function toggleCockpitMode() {
-    cockpitMode = !cockpitMode;
-
-    if (cockpitMode) {
-        if (inspectionMode) {
-            toggleInspectionMode();
-        }
-
-        airplane.add(cameraHolder);
-        cameraHolder.position.x = -0.3;
-        cameraHolder.position.y = 2.5;
-        cameraHolder.position.z = -1 * cameraPosition.z + 0.8;
-    }
-    else {
-        rotationGroup.add(cameraHolder);
-
-        cameraHolder.position.copy(holderPosition);
-        camera.up.set(0, 1, 0);
-        camera.position.copy(cameraPosition)
-    }
-}
-
-const MAX_SPEED = 2; // velocidade escalar maxima
-const SCALAR_ACCELERATION = 0.025; //  aceleração escalar
-let speed = 0; // velocidade escalar
-let linearVel = new THREE.Vector3(0, 0, 0); // vetor velocidade linear
-let angularVel = new THREE.Vector3(); // vetor velocidade angular
-
+// --------------------------------------------------------- //
+// ---------- Listerners e mapeamento do teclado ---------- //
+// ------------------------------------------------------- //
+window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
+window.addEventListener('keydown', onKeyDown, false);
+window.addEventListener('keyup', onKeyUp, false);
 
 function onKeyDown(event) {
     switch (event.key) {
@@ -600,67 +659,11 @@ function onKeyUp(event) {
     }
 }
 
-function updatePosition() {
-    // testa se o modelo ja esta carreagado
-    if (airplane) {
-        // rotacao += velocidade angular - contrapeso
-        // o contrapeso multiplicado pelo seno faz o comportamento de limitar a rotacao e volta-la ao inicial
-        airplane.rotation.z += angularVel.z - 0.025 * Math.sin(airplane.rotation.z);
-        airplane.rotation.x += angularVel.x - 0.025 * Math.sin(airplane.rotation.x);
-
-        rotationGroup.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.015;
-
-        linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(rotationGroup.rotation.y);
-        linearVel.y = speed * -Math.sin(airplane.rotation.x);
-        linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(rotationGroup.rotation.y);
-
-        movementGroup.position.add(linearVel);
-    }
-}
-
-//criação dos torus
-
-function createTorus() {
-    const geometry = new THREE.RingGeometry(12, 15, 32);
-    const material = new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide, opacity: 5 });
-    const torus = new THREE.Mesh(geometry, material);
-    return torus;
-}
-
-function createTorusChecekd() {
-    const geometry = new THREE.RingGeometry(12, 15, 32);
-    const material = new THREE.MeshBasicMaterial({ color: '#00FF00', side: THREE.DoubleSide, opacity: 0.0005 });
-    const torus = new THREE.Mesh(geometry, material);
-    return torus;
-}
-
-function createTorusNext() {
-    const geometry = new THREE.RingGeometry(12, 15, 32);
-    const material = new THREE.MeshBasicMaterial({ color: '#FF0000', side: THREE.DoubleSide });
-    const torus = new THREE.Mesh(geometry, material);
-    return torus;
-}
-
-const deg90 = Math.PI / 2;
-
-const ring = createTorus();
-scene.add(ring);
-console.log(ring.material.opacity)
-ring.position.copy(points[torusCount])
-
-const nextTorus = createTorusNext();
-scene.add(nextTorus);
-nextTorus.position.copy(points[torusCount + 1])
-
-const checkedTorus = createTorusChecekd();
-scene.add(checkedTorus);
-checkedTorus.visible = false;
-
-window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
-window.addEventListener('keydown', onKeyDown, false);
-window.addEventListener('keyup', onKeyUp, false);
-
+// ---------------------------- //
+// ---------- Render ---------- //
+// ---------------------------- //
 render();
+
 function render() {
     if (inspectionMode) {
         trackballControls.update(); // Enable mouse movements
