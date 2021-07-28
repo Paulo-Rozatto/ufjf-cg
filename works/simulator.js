@@ -1,7 +1,6 @@
 import * as THREE from '../build/three.module.js';
 import { TrackballControls } from '../build/jsm/controls/TrackballControls.js';
 import { GLTFLoader } from '../build/jsm/loaders/GLTFLoader.js';
-import { GLTFExporter } from '../build/jsm/exporters/GLTFExporter.js'
 import {
     initRenderer,
     InfoBox,
@@ -26,9 +25,6 @@ var sec = 0;
 
 var clock = new THREE.Clock();
 clock.autoStart = false;
-
-const time = clock.elapsedTime;
-const delta = clock.getDelta();
 
 const points = [
     new THREE.Vector3(-130, 95, -200),
@@ -63,6 +59,7 @@ function addTube() {
     addGeometry(tubeGeometry);
 
 }
+
 function addGeometry(geometry) {
 
     // 3D shape
@@ -528,7 +525,7 @@ function toggleCockpitMode() {
         cameraHolder.position.z = -1 * cameraPosition.z + 0.8;
     }
     else {
-        movementGroup.add(cameraHolder);
+        rotationGroup.add(cameraHolder);
 
         cameraHolder.position.copy(holderPosition);
         camera.up.set(0, 1, 0);
