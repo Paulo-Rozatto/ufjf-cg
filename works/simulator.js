@@ -34,6 +34,10 @@ let sec = 0;
 
 const infoBox = new SecondaryBox("Checkpoints: " + torusCount + "/14");
 
+const speedBox = new SecondaryBox("0 m/s");
+speedBox.box.style.left = "auto";
+speedBox.box.style.right = "0";
+
 // -- Criação de grupos que auxiliam a movimentação e rotação --
 const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
 const movementGroupPosition = new THREE.Vector3(-130, 2.5, -550); // Salva posicao do grupo para voltar do modo inspecao
@@ -371,28 +375,59 @@ function toggleCockpitMode() {
 // ---------- Movimentação ---------- //
 // --------------------------------- //
 
-const MAX_SPEED = 2; // velocidade escalar maxima
-const SCALAR_ACCELERATION = 0.025; //  aceleração escalar
-let speed = 0; // velocidade escalar
+const MAX_SPEED = 150; // velocidade escalar maxima em m/s
+const SCALAR_ACCELERATION = 2; //  aceleração escalar em m/s^2
+const FLY_SPEED = 30 // velocidade minima para decoloar
+const GRAVITY = 10
+let speed = 0; // velocidade escalar em m/s
+let gravitySpeed = 0; // acumula a aceleração da gravidade
 let linearVel = new THREE.Vector3(0, 0, 0); // vetor velocidade linear
 let angularVel = new THREE.Vector3(); // vetor velocidade angular
+let moveClock = new THREE.Clock();
+let accOietantion = 0; // sentido da aceleracao para o update speed: acelerando 1, desacelerando -1, ou nulo 0)
 
-
-function updatePosition() {
+function updatePosition(delta) {
     // testa se o modelo ja esta carreagado
     if (airplane) {
+        updateSpeed(delta);
+
         // rotacao += velocidade angular - contrapeso
         // o contrapeso multiplicado pelo seno faz o comportamento de limitar a rotacao e volta-la ao inicial
-        airplane.rotation.z += angularVel.z - 0.025 * Math.sin(airplane.rotation.z);
-        airplane.rotation.x += angularVel.x - 0.025 * Math.sin(airplane.rotation.x);
+        airplane.rotation.z += delta * (angularVel.z - 2 * Math.sin(airplane.rotation.z));
+        airplane.rotation.x += delta * (angularVel.x - 1.5 * Math.sin(airplane.rotation.x));
 
-        rotationGroup.rotation.y += speed * -Math.sin(airplane.rotation.z) * 0.015;
+        rotationGroup.rotation.y += speed * delta * -Math.sin(airplane.rotation.z * delta);
+
+        if (speed < FLY_SPEED && movementGroup.position.y > 2.5) {
+            gravitySpeed += GRAVITY * delta;
+        }
+        else {
+            gravitySpeed = 0;
+        }
 
         linearVel.x = speed * Math.cos(airplane.rotation.x) * Math.sin(rotationGroup.rotation.y);
-        linearVel.y = speed * -Math.sin(airplane.rotation.x);
-        linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(rotationGroup.rotation.y);
+        linearVel.z = speed * Math.cos(airplane.rotation.x) * Math.cos(rotationGroup.rotation.y)
+        linearVel.y = speed * -Math.sin(airplane.rotation.x) - gravitySpeed;
+        linearVel.multiplyScalar(delta);
 
         movementGroup.position.add(linearVel);
+    }
+}
+
+function updateSpeed(delta) {
+    if (accOietantion === 1) {
+        if (speed <= MAX_SPEED) {
+            speed += SCALAR_ACCELERATION * delta * 5;
+
+            speedBox.changeMessage(speed.toFixed(0) + "m/s");
+        }
+    }
+    else if (accOietantion === -1) {
+        if (speed >= SCALAR_ACCELERATION) {
+            speed -= SCALAR_ACCELERATION * delta * 5;
+
+            speedBox.changeMessage(speed.toFixed(0) + "m/s");
+        }
     }
 }
 
@@ -610,15 +645,11 @@ function onKeyDown(event) {
             break;
         }
         case 'q': {
-            if (speed <= MAX_SPEED - SCALAR_ACCELERATION) {
-                speed += SCALAR_ACCELERATION;
-            }
+            accOietantion = 1;
             break;
         };
         case 'a': {
-            if (speed >= SCALAR_ACCELERATION) {
-                speed -= SCALAR_ACCELERATION;
-            }
+            accOietantion = -1;
             break;
         };
         case 'ArrowLeft': {
@@ -646,6 +677,11 @@ function onKeyDown(event) {
 
 function onKeyUp(event) {
     switch (event.key) {
+        case 'q':
+        case 'a': {
+            accOietantion = 0;
+            break;
+        };
         case 'ArrowLeft':
         case 'ArrowRight': {
             angularVel.z = 0;
@@ -665,10 +701,12 @@ function onKeyUp(event) {
 render();
 
 function render() {
+    // delta = moveClock.getDelta();
+
     if (inspectionMode) {
         trackballControls.update(); // Enable mouse movements
     } else {
-        updatePosition();
+        updatePosition(moveClock.getDelta());
     }
     requestAnimationFrame(render);
     renderer.render(scene, camera) // Render scene
