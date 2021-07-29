@@ -53,7 +53,7 @@ cameraHolder.position.copy(holderPosition);
 rotationGroup.add(cameraHolder);
 
 // -- Criação da camera --
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
 const cameraPosition = new THREE.Vector3(0, 0, -50);
 camera.position.copy(cameraPosition);
 camera.lookAt(movementGroupPosition);
@@ -257,13 +257,15 @@ function mountainsOnLoad(gltf) {
 }
 
 // Carregamento do modelo da árvore
-let tree1;
+const treeGroup = new THREE.Group();
+scene.add(treeGroup);
+
 function treeOnLoad(gltf) {
-    tree1 = gltf.scene;
+    let tree = gltf.scene;
 
     // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
     let color;
-    tree1.traverse((child) => {
+    tree.traverse((child) => {
         if (child.isMesh) {
             color = child.material.color;
             child.material = new THREE.MeshLambertMaterial({ color });
@@ -271,7 +273,7 @@ function treeOnLoad(gltf) {
         }
     });
 
-    spreadTrees(tree1); // cria clones e espalha as arvores
+    spreadTrees(tree); // cria clones e espalha as arvores
 }
 
 function spreadTrees(tree) {
@@ -307,7 +309,7 @@ function spreadTrees(tree) {
             treeClone.position.copy(intersection.point);
             treeCount += 1;
 
-            scene.add(treeClone);
+            treeGroup.add(treeClone);
         }
         t += 7;
 
@@ -327,6 +329,7 @@ function toggleInspectionMode() {
         }
 
         ground.visible = false;
+        treeGroup.visible = false;
         mountains.visible = false;
         movementGroupPosition.copy(movementGroup.position);
         movementGroup.position.set(0, 1, 0)
@@ -339,6 +342,7 @@ function toggleInspectionMode() {
         trackballControls.enabled = false;
 
         ground.visible = true;
+        treeGroup.visible = true;
         mountains.visible = true;
         movementGroup.position.copy(movementGroupPosition);
         airplane.rotation.copy(airPlaneRotation);
