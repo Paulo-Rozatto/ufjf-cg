@@ -99,7 +99,7 @@ const helper = new THREE.DirectionalLightHelper(movingLight, 5);
 
 
 // -- Lightmap das sombras das árvores --
-let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow2.png')
+let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow.png')
 lm.flipY = false;
 
 // -- Criação do chão --
@@ -174,7 +174,6 @@ const deg90 = Math.PI / 2;
 
 const ring = createTorus();
 scene.add(ring);
-console.log(ring.material.opacity)
 ring.position.copy(points[torusCount])
 
 const nextTorus = createTorusNext();
@@ -218,8 +217,11 @@ function airplaneOnLoad(gltf) {
             if (/cockpit/.test(child.name)) {
                 child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity, side: THREE.DoubleSide })
             }
+            else if (/wh*/.test(child.name)) {
+                child.material = new THREE.MeshLambertMaterial({ color })
+            }
             else
-                child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity })
+                child.material = new THREE.MeshPhongMaterial({ color, shininess: 40, specular: 0x11F11 })
         }
     });
 
@@ -229,7 +231,7 @@ function airplaneOnLoad(gltf) {
 // Carregamento das montanhas
 let mountains;
 
-loader.load('assets/terrain3.glb', mountainsOnLoad, onProgress, onError)
+loader.load('assets/mountains.glb', mountainsOnLoad, onProgress, onError)
 
 function mountainsOnLoad(gltf) {
     let color;
@@ -239,9 +241,7 @@ function mountainsOnLoad(gltf) {
     mountains.traverse((child) => {
         if (child.isMesh) {
             color = child.material.color;
-
             child.material = new THREE.MeshLambertMaterial({ color });
-            // child.castShadow = true;
             child.receiveShadow = true;
         }
     });
@@ -427,7 +427,7 @@ function updateSpeed(delta) {
         }
     }
     else if (accOietantion === -1) {
-        if (speed >= SCALAR_ACCELERATION) {
+        if (speed > 0) {
             speed -= SCALAR_ACCELERATION * delta * 5;
 
             speedBox.changeMessage(speed.toFixed(0) + "m/s");
