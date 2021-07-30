@@ -22,9 +22,13 @@ let start = false;
 let inspectionMode = false;
 let cockpitMode = false;
 
+// -------------------------------------- //
+// ----------- Contador de tempo -------- //
 const clock = new THREE.Clock();
 clock.autoStart = false;
-
+// -------------------------------------------------- //
+// Contador de torus e variável para receber o tempo //
+// --------------------------------------------------//
 let torusCount = 0;
 let sec = 0;
 
@@ -123,30 +127,28 @@ scene.add(parent);
 // Vetor de pontos para a curva CatmullRoll e para a posicao dos torus
 const points = [
     new THREE.Vector3(-130, 95, -200),
-    new THREE.Vector3(-190, 115, 106),
-    new THREE.Vector3(-239, 134, 665),
+    new THREE.Vector3(-190, 150, 106),
+    new THREE.Vector3(-200, 108, 665),
     new THREE.Vector3(-383, 137, 860),
-    new THREE.Vector3(-703, 145, 633),
-    new THREE.Vector3(-648, 138, 309),
-    new THREE.Vector3(-370, 154, -154),
+    new THREE.Vector3(-603, 145, 900),
+    new THREE.Vector3(-850, 138, 309),
+    new THREE.Vector3(-370, 54, -154),
     new THREE.Vector3(-428, 142, -388),
-    new THREE.Vector3(-714, 142, -374),
-    new THREE.Vector3(-785, 154, -97),
-    new THREE.Vector3(-41, 142, 355),
+    new THREE.Vector3(-801, 86, -399),
+    new THREE.Vector3(-869, 54, -117),
+    new THREE.Vector3(-41, 42, 355),
     new THREE.Vector3(338, 142, 314),
     new THREE.Vector3(376, 154, 103),
-    new THREE.Vector3(-26, 85, -201)
+    new THREE.Vector3(-26, 64, -201)
 ];
 
+// -------- Criação do tubo que representa o caminho ----  ///
+
 const pipeSpline = new THREE.CatmullRomCurve3(points);
-const tubeGeometry = new THREE.TubeGeometry(pipeSpline, 100, 2, 2, false);
-const tubeMaterial = new THREE.MeshLambertMaterial({ color: 0xff00ff });
+const tubeGeometry = new THREE.TubeGeometry(pipeSpline, 100, 0.25, 20, false);
+const tubeMaterial = new THREE.MeshLambertMaterial({ color: '#000080' });
 const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
 parent.add(tube);
-
-const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.3, wireframe: true, transparent: true });
-const wireframe = new THREE.Mesh(tubeGeometry, wireframeMaterial);
-tube.add(wireframe);
 
 // Criação dos torus
 function createTorus() {
@@ -171,15 +173,15 @@ function createTorusNext() {
 }
 
 const deg90 = Math.PI / 2;
-
+// Torus que precisa passar
 const ring = createTorus();
 scene.add(ring);
 ring.position.copy(points[torusCount])
-
+// Próximo torus
 const nextTorus = createTorusNext();
 scene.add(nextTorus);
 nextTorus.position.copy(points[torusCount + 1])
-
+// Torus pelo qual acabou de passar
 const checkedTorus = createTorusChecekd();
 scene.add(checkedTorus);
 checkedTorus.visible = false;
@@ -434,13 +436,13 @@ function updateSpeed(delta) {
         }
     }
 }
-
+// Detecta se passou pelo torus
 function detectContact() {
-
+    // Condição para adicionar uma certa margem de erro para passar pelo torus
     if (movementGroup.position.x <= ring.position.x + 20 && movementGroup.position.x >= ring.position.x - 20
         && movementGroup.position.y <= ring.position.y + 15 && movementGroup.position.y >= ring.position.y - 15
         && movementGroup.position.z <= ring.position.z + 7 && movementGroup.position.z >= ring.position.z - 7) {
-
+        //Verificação para reposicionamento dos torus
         switch (torusCount) {
             case 0: {
                 start = true;
@@ -705,7 +707,6 @@ function onKeyUp(event) {
 render();
 
 function render() {
-    // delta = moveClock.getDelta();
 
     if (inspectionMode) {
         trackballControls.update(); // Enable mouse movements
@@ -716,7 +717,7 @@ function render() {
     renderer.render(scene, camera) // Render scene
     detectContact();
 
-    if (start) {
+    if (start) { //Contador de tempo colocado no render para ter atualização em tempo real
         sec = clock.getElapsedTime().toFixed(2);
         infoBox.changeMessage("Checkpoints: " + torusCount + "/14 Time: " + sec + "s");
     }
