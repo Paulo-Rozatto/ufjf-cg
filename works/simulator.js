@@ -17,25 +17,35 @@ renderer.shadowMap.enabled = true;
 // ---------------------------------------- //
 // ---------- Variaveis Globais ---------- //
 // ---------------------------------------- //
-
 let start = false;
 let inspectionMode = false;
 let cockpitMode = false;
 
 // -------------------------------------- //
 // ----------- Contador de tempo -------- //
+// -------------------------------------- //
 const clock = new THREE.Clock();
 clock.autoStart = false;
-// -------------------------------------------------- //
-// Contador de torus e variável para receber o tempo //
-// --------------------------------------------------//
+
+// --------------------------------------------------------- //
+// --- Contador de torus e variável para receber o tempo --- //
+// --------------------------------------------------------- //
 let torusCount = 0;
 let sec = 0;
+
+// ---------------------------------------- //
+// ---------- Carregadores ---------------- //
+// ---------------------------------------- //
+const gltfLoader = new GLTFLoader();
+const textureLoader = new THREE.TextureLoader();
+
+// Callbacks em comum do carregamento de objetos
+function onProgress(xhr) { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); }
+function onError(error) { console.error('An error happened', error); }
 
 // ----------------------------------------------------- //
 // ---------- Declareção dos objetos da cena ---------- //
 // --------------------------------------------------- //
-
 const infoBox = new SecondaryBox("Checkpoints: " + torusCount + "/14");
 
 const speedBox = new SecondaryBox("0 m/s");
@@ -103,12 +113,16 @@ const helper = new THREE.DirectionalLightHelper(movingLight, 5);
 
 
 // -- Lightmap das sombras das árvores --
-// let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow.png')
+// let lm = textureLoader.load('assets/textures/ground-shadow.png')
 // lm.flipY = false;
 
 
+// ------------------------------------------------------- //
+// ---------- Criação da Cidade ------------------------- //
+// ----------------------------------------------------- //
+
 // -- Criação do chão --
-const sideWalkTexture = new THREE.TextureLoader().load('assets/textures/sidewalk.jpg');
+const sideWalkTexture = textureLoader.load('assets/textures/sidewalk.jpg');
 sideWalkTexture.wrapS = THREE.RepeatWrapping;
 sideWalkTexture.wrapT = THREE.RepeatWrapping;
 sideWalkTexture.repeat.set(600, 600);
@@ -126,13 +140,13 @@ cityGround.receiveShadow = true;
 cityGround.position.y = 0;
 scene.add(cityGround);
 
-const streetTexture = new THREE.TextureLoader().load('assets/textures/asfalto.jpg');
+const streetTexture = textureLoader.load('assets/textures/asfalto.jpg');
 streetTexture.wrapT = THREE.RepeatWrapping;
 streetTexture.repeat.set(1, 85 / 15);
 const streetGeo = new THREE.PlaneGeometry(15, 185);
 const streetMat = new THREE.MeshLambertMaterial({ map: streetTexture });
 
-const streetTexture2 = new THREE.TextureLoader().load('assets/textures/asfalto.jpg');
+const streetTexture2 = textureLoader.load('assets/textures/asfalto.jpg');
 streetTexture2.wrapS = THREE.RepeatWrapping;
 streetTexture2.repeat.set(1, 1);
 const streetGeo2 = new THREE.PlaneGeometry(15, 85);
@@ -197,6 +211,102 @@ function createBuildings() {
     }
 }
 
+// ------------------------------------------------------- //
+// ---------- Criação da Periferia ---------------------- //
+// ----------------------------------------------------- //
+
+// Carregamento das montanhas
+let mountains;
+
+// loader.load('assets/mountains.glb', mountainsOnLoad, onProgress, onError)
+
+function mountainsOnLoad(gltf) {
+    let color;
+    mountains = gltf.scene;
+
+    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
+    mountains.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+            child.material = new THREE.MeshLambertMaterial({ color });
+            child.receiveShadow = true;
+        }
+    });
+    scene.add(mountains);
+
+    // O carregamento das arvores esta sendo chamado nesse callback porque o terrno precisa estar carregado e adcionado na cena para posicionar
+    // as arvores corretamente
+    // apesar de scene.add() ser uma função síncrona, o modelo demora um pouco a ser realmente adcionado na cena, entao precisa do timeout para compensar o delay
+    window.setTimeout(
+        () => { gltfLoader.load('assets/tree1.glb', treeOnLoad, onProgress, onError); },
+        500
+    );
+}
+
+// Carregamento do modelo da árvore
+const treeGroup = new THREE.Group();
+scene.add(treeGroup);
+
+function treeOnLoad(gltf) {
+    let tree = gltf.scene;
+
+    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
+    let color;
+    tree.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+            child.material = new THREE.MeshLambertMaterial({ color });
+            child.castShadow = true;
+        }
+    });
+
+    spreadTrees(tree); // cria clones e espalha as arvores
+}
+
+function spreadTrees(tree) {
+    const near = 0;
+    const far = 300;
+    const origin = new THREE.Vector3(0, 20, -200);
+    const direction = new THREE.Vector3(0, -1, 0);
+    const newPosition = new THREE.Vector3();
+    const raycaster = new THREE.Raycaster(origin, direction, near, far);
+
+    let treeClone, treeCount = 0, t = 0;
+    let intersection;
+    let offset = 25;
+
+    intersection = raycaster.intersectObject(cityGround, true)
+
+    while (treeCount < 120) {
+        newPosition.set(
+            Math.sin(t) * 600 - 320,
+            far,
+            -500 + 1.2 * t + offset,
+        );
+        offset *= -1;
+
+        raycaster.set(newPosition, direction);
+
+        intersection = raycaster.intersectObjects([cityGround, mountains], true)[0];
+
+        if (intersection && intersection.distance > 280) {
+            // newPosition.y = intersection.distance * -1;
+
+            treeClone = tree.clone();
+            treeClone.position.copy(intersection.point);
+            treeCount += 1;
+
+            treeGroup.add(treeClone);
+        }
+        t += 7;
+
+    }
+}
+
+
+// ------------------------------------------------------- //
+// ---------- Criação do Caminho ------------------------ //
+// ----------------------------------------------------- //
 // Criação do caminho usando tube geometry
 parent = new THREE.Object3D();
 scene.add(parent);
@@ -265,19 +375,14 @@ checkedTorus.visible = false;
 
 
 // ------------------------------------------------------- //
-// ---------- Carregamento de objetos externos ---------- //
+// ---------- Carregamento do modelo do avião ---------- //
 // ----------------------------------------------------- //
-const loader = new GLTFLoader();
-
-// Callbacks em comum do carregamento de objetos
-function onProgress(xhr) { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); }
-function onError(error) { console.error('An error happened', error); }
 
 // Carregamento do modelo do avião
 let airplane
 let airPlaneRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
 
-loader.load('assets/airplane-camuflado.glb', airplaneOnLoad, onProgress, onError);
+gltfLoader.load('assets/airplane-camuflado.glb', airplaneOnLoad, onProgress, onError);
 
 function airplaneOnLoad(gltf) {
     airplane = gltf.scene;
@@ -307,93 +412,6 @@ function airplaneOnLoad(gltf) {
     rotationGroup.add(airplane);
 }
 
-// Carregamento das montanhas
-let mountains;
-
-// loader.load('assets/mountains.glb', mountainsOnLoad, onProgress, onError)
-
-function mountainsOnLoad(gltf) {
-    let color;
-    mountains = gltf.scene;
-
-    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
-    mountains.traverse((child) => {
-        if (child.isMesh) {
-            color = child.material.color;
-            child.material = new THREE.MeshLambertMaterial({ color });
-            child.receiveShadow = true;
-        }
-    });
-    scene.add(mountains);
-
-    // O carregamento das arvores esta sendo chamado nesse callback porque o terrno precisa estar carregado e adcionado na cena para posicionar
-    // as arvores corretamente
-    // apesar de scene.add() ser uma função síncrona, o modelo demora um pouco a ser realmente adcionado na cena, entao precisa do timeout para compensar o delay
-    window.setTimeout(
-        () => { loader.load('assets/tree1.glb', treeOnLoad, onProgress, onError); },
-        500
-    );
-}
-
-// Carregamento do modelo da árvore
-const treeGroup = new THREE.Group();
-scene.add(treeGroup);
-
-function treeOnLoad(gltf) {
-    let tree = gltf.scene;
-
-    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
-    let color;
-    tree.traverse((child) => {
-        if (child.isMesh) {
-            color = child.material.color;
-            child.material = new THREE.MeshLambertMaterial({ color });
-            child.castShadow = true;
-        }
-    });
-
-    spreadTrees(tree); // cria clones e espalha as arvores
-}
-
-function spreadTrees(tree) {
-    const near = 0;
-    const far = 300;
-    const origin = new THREE.Vector3(0, 20, -200);
-    const direction = new THREE.Vector3(0, -1, 0);
-    const newPosition = new THREE.Vector3();
-    const raycaster = new THREE.Raycaster(origin, direction, near, far);
-
-    let treeClone, treeCount = 0, t = 0;
-    let intersection;
-    let offset = 25;
-
-    intersection = raycaster.intersectObject(cityGround, true)
-
-    while (treeCount < 120) {
-        newPosition.set(
-            Math.sin(t) * 600 - 320,
-            far,
-            -500 + 1.2 * t + offset,
-        );
-        offset *= -1;
-
-        raycaster.set(newPosition, direction);
-
-        intersection = raycaster.intersectObjects([cityGround, mountains], true)[0];
-
-        if (intersection && intersection.distance > 280) {
-            // newPosition.y = intersection.distance * -1;
-
-            treeClone = tree.clone();
-            treeClone.position.copy(intersection.point);
-            treeCount += 1;
-
-            treeGroup.add(treeClone);
-        }
-        t += 7;
-
-    }
-}
 
 /// ----------------------------------------------- //
 // ---------- Funções de modo de câmera ---------- //
@@ -807,7 +825,7 @@ function render() {
 function building1() {
     const building = new THREE.Object3D();
 
-    let texture = new THREE.TextureLoader().load('assets/textures/window1.jpg')
+    let texture = textureLoader.load('assets/textures/window1.jpg')
 
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
@@ -823,7 +841,7 @@ function building1() {
 function building2() {
     const building = new THREE.Object3D();
 
-    let bottomTexture = new THREE.TextureLoader().load('assets/textures/granite1.jpg')
+    let bottomTexture = textureLoader.load('assets/textures/granite1.jpg')
     bottomTexture.wrapS = THREE.RepeatWrapping;
     bottomTexture.wrapT = THREE.RepeatWrapping;
     bottomTexture.repeat.set(2, 1);
@@ -832,7 +850,7 @@ function building2() {
     bottom.position.y = 5;
     building.add(bottom);
 
-    let topTexture = new THREE.TextureLoader().load('assets/textures/window2.jpg')
+    let topTexture = textureLoader.load('assets/textures/window2.jpg')
     topTexture.wrapS = THREE.RepeatWrapping;
     topTexture.wrapT = THREE.RepeatWrapping;
     topTexture.repeat.set(2, 2);
@@ -847,7 +865,7 @@ function building2() {
 function building3() {
     const building = new THREE.Object3D();
 
-    let bottomTexture = new THREE.TextureLoader().load('assets/textures/marble1.jpg')
+    let bottomTexture = textureLoader.load('assets/textures/marble1.jpg')
     bottomTexture.wrapT = THREE.RepeatWrapping;
     bottomTexture.repeat.set(1, 3);
 
@@ -858,7 +876,7 @@ function building3() {
     ground.rotation.x = - Math.PI / 2;
     building.add(ground);
 
-    let towerTexture = new THREE.TextureLoader().load('assets/textures/window3.jpg')
+    let towerTexture = textureLoader.load('assets/textures/window3.jpg')
     towerTexture.wrapS = THREE.RepeatWrapping;
     towerTexture.wrapT = THREE.RepeatWrapping;
     towerTexture.repeat.set(0.5, 1);
@@ -877,7 +895,7 @@ function building3() {
 function building4() {
     const building = new THREE.Object3D();
 
-    let bottomTexture = new THREE.TextureLoader().load('assets/textures/window4.2.jpg')
+    let bottomTexture = textureLoader.load('assets/textures/window4.2.jpg')
     bottomTexture.wrapS = THREE.RepeatWrapping;
     bottomTexture.wrapT = THREE.RepeatWrapping;
     bottomTexture.repeat.set(4, 1);
@@ -888,7 +906,7 @@ function building4() {
     bottom.position.y = 5;
     building.add(bottom);
 
-    let topTexture = new THREE.TextureLoader().load('assets/textures/window4.jpg')
+    let topTexture = textureLoader.load('assets/textures/window4.jpg')
     topTexture.wrapS = THREE.RepeatWrapping;
     topTexture.wrapT = THREE.RepeatWrapping;
     topTexture.repeat.set(4, 4);
