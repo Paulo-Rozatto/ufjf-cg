@@ -212,10 +212,20 @@ function createBuildings() {
 }
 
 // ------------------------------------------------------- //
-// ---------- Criação da Periferia ---------------------- //
-// ----------------------------------------------------- //
+// ---------- Criação da Periferia ----------------------- //
+// ------------------------------------------------------- //
 
-// Carregamento das montanhas
+// ---- Chao da periferia --- //
+const outskirtsGround = new THREE.Mesh(
+    new THREE.PlaneGeometry(4000, 4000),
+    new THREE.MeshBasicMaterial({ color: 0x009066 })
+);
+outskirtsGround.rotation.x = - Math.PI / 2;
+outskirtsGround.position.y = -0.1;
+scene.add(outskirtsGround);
+
+
+// --- Carregamento das montanhas --- //
 let mountains;
 
 // loader.load('assets/mountains.glb', mountainsOnLoad, onProgress, onError)
@@ -237,15 +247,17 @@ function mountainsOnLoad(gltf) {
     // O carregamento das arvores esta sendo chamado nesse callback porque o terrno precisa estar carregado e adcionado na cena para posicionar
     // as arvores corretamente
     // apesar de scene.add() ser uma função síncrona, o modelo demora um pouco a ser realmente adcionado na cena, entao precisa do timeout para compensar o delay
-    window.setTimeout(
-        () => { gltfLoader.load('assets/tree1.glb', treeOnLoad, onProgress, onError); },
-        500
-    );
+    // window.setTimeout(
+    //     () => { gltfLoader.load('assets/tree1.glb', treeOnLoad, onProgress, onError); },
+    //     500
+    // );
 }
 
 // Carregamento do modelo da árvore
 const treeGroup = new THREE.Group();
 scene.add(treeGroup);
+
+gltfLoader.load('assets/tree1.glb', treeOnLoad, onProgress, onError);
 
 function treeOnLoad(gltf) {
     let tree = gltf.scene;
@@ -264,42 +276,25 @@ function treeOnLoad(gltf) {
 }
 
 function spreadTrees(tree) {
-    const near = 0;
-    const far = 300;
-    const origin = new THREE.Vector3(0, 20, -200);
-    const direction = new THREE.Vector3(0, -1, 0);
-    const newPosition = new THREE.Vector3();
-    const raycaster = new THREE.Raycaster(origin, direction, near, far);
+    let clone;
+    let radius = 740;
+    let offset = 20;
+    let growthRate = 50;
+    let theta = 0;
 
-    let treeClone, treeCount = 0, t = 0;
-    let intersection;
-    let offset = 25;
+    for (let i = 1; i <= 5; i++) {
+        for (let j = 0; j <= 40; j++) {
+            clone = tree.clone();
 
-    intersection = raycaster.intersectObject(cityGround, true)
+            clone.position.x = Math.cos(theta) * radius + offset * i * (Math.sin(j) - Math.cos(j)) //+ offset;
+            clone.position.z = Math.sin(theta) * radius + offset * i * (Math.sin(j) - Math.cos(j))
+            treeGroup.add(clone);
 
-    while (treeCount < 120) {
-        newPosition.set(
-            Math.sin(t) * 600 - 320,
-            far,
-            -500 + 1.2 * t + offset,
-        );
-        offset *= -1;
 
-        raycaster.set(newPosition, direction);
-
-        intersection = raycaster.intersectObjects([cityGround, mountains], true)[0];
-
-        if (intersection && intersection.distance > 280) {
-            // newPosition.y = intersection.distance * -1;
-
-            treeClone = tree.clone();
-            treeClone.position.copy(intersection.point);
-            treeCount += 1;
-
-            treeGroup.add(treeClone);
+            theta += Math.PI / 20;
+            offset *= -1;
         }
-        t += 7;
-
+        radius += growthRate;
     }
 }
 
@@ -307,6 +302,7 @@ function spreadTrees(tree) {
 // ------------------------------------------------------- //
 // ---------- Criação do Caminho ------------------------ //
 // ----------------------------------------------------- //
+
 // Criação do caminho usando tube geometry
 parent = new THREE.Object3D();
 scene.add(parent);
