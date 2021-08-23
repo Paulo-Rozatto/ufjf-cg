@@ -106,9 +106,15 @@ const helper = new THREE.DirectionalLightHelper(movingLight, 5);
 // let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow.png')
 // lm.flipY = false;
 
+
 // -- Criação do chão --
+const sideWalkTexture = new THREE.TextureLoader().load('assets/textures/sidewalk.jpg');
+sideWalkTexture.wrapS = THREE.RepeatWrapping;
+sideWalkTexture.wrapT = THREE.RepeatWrapping;
+sideWalkTexture.repeat.set(600, 600);
+
 const cityGroundGeo = new THREE.PlaneGeometry(2000, 2000);
-const cityGroundMat = new THREE.MeshLambertMaterial({ color: 0x323232 });
+const cityGroundMat = new THREE.MeshBasicMaterial({ map: sideWalkTexture });
 
 // Cria um segundo array de UVs para funcionar o lightmap
 // let uv1 = groundGeo.getAttribute('uv').array;
@@ -160,6 +166,33 @@ function createStreets() {
     }
 }
 
+createBuildings();
+function createBuildings() {
+    for (let i = 0; i < 20; i++) {
+        for (let j = 0; j < 20; j++) {
+            const building = chooseBuilding(i + j);
+
+            // building.rotation.x = -0.5 * Math.PI;
+
+            building.position.x = -1000 + 60 + 100 * i;
+            building.position.y = 0.1;
+            building.position.z = -1000 + 50 + 200 * j / 2;
+            scene.add(building);
+        }
+    }
+
+    function chooseBuilding(t) {
+        let i = Math.floor(3 * Math.sin(t)) + 1;
+
+        switch (i) {
+            case 1: return building1();
+            case 2: return building2();
+            case 3: return building3();
+            default: return building4();
+            // default: return building3();
+        }
+    }
+}
 
 // Criação do caminho usando tube geometry
 parent = new THREE.Object3D();
@@ -810,31 +843,31 @@ function building2() {
 
 function building3() {
     const building = new THREE.Object3D();
-    
+
     let bottomTexture = new THREE.TextureLoader().load('assets/textures/marble1.jpg')
     bottomTexture.wrapT = THREE.RepeatWrapping;
     bottomTexture.repeat.set(1, 3);
-    
+
     const groundGeo = new THREE.PlaneGeometry(4.5, 40);
     const groundMat = new THREE.MeshBasicMaterial({ map: bottomTexture });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.position.y = 0.2;
     ground.rotation.x = - Math.PI / 2;
     building.add(ground);
-    
+
     let towerTexture = new THREE.TextureLoader().load('assets/textures/window3.jpg')
     towerTexture.wrapS = THREE.RepeatWrapping;
     towerTexture.wrapT = THREE.RepeatWrapping;
     towerTexture.repeat.set(0.5, 1);
-    
+
     const tower1 = customBox(15, 70, 40, towerTexture);
     tower1.position.set(9, 35, 0);
     building.add(tower1)
-    
+
     const tower2 = customBox(15, 70, 40, towerTexture);
     tower2.position.set(-9, 35, 0);
     building.add(tower2);
-    
+
     return building;
 }
 
