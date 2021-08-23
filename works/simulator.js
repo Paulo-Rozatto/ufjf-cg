@@ -44,7 +44,7 @@ speedBox.box.style.right = "0";
 
 // -- Criação de grupos que auxiliam a movimentação e rotação --
 const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
-const movementGroupPosition = new THREE.Vector3(-130, 2.5, -550); // Salva posicao do grupo para voltar do modo inspecao
+const movementGroupPosition = new THREE.Vector3(7.5, 15, -30); // Salva posicao do grupo para voltar do modo inspecao
 movementGroup.position.copy(movementGroupPosition);
 scene.add(movementGroup);
 
@@ -59,9 +59,9 @@ rotationGroup.add(cameraHolder);
 // -- Criação da camera --
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
 const cameraPosition = new THREE.Vector3(0, 0, -50);
+cameraHolder.add(camera);
 camera.position.copy(cameraPosition);
 camera.lookAt(movementGroupPosition);
-cameraHolder.add(camera);
 
 // -- Trackball controls para o modo inspeção --
 const trackballControls = new TrackballControls(camera, renderer.domElement);
@@ -103,22 +103,63 @@ const helper = new THREE.DirectionalLightHelper(movingLight, 5);
 
 
 // -- Lightmap das sombras das árvores --
-let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow.png')
-lm.flipY = false;
+// let lm = new THREE.TextureLoader().load('assets/textures/ground-shadow.png')
+// lm.flipY = false;
 
 // -- Criação do chão --
-const groundGeo = new THREE.PlaneGeometry(4000, 4000);
-const groundMat = new THREE.MeshLambertMaterial({ color: 0x001D0B, lightMap: lm });
+const cityGroundGeo = new THREE.PlaneGeometry(2000, 2000);
+const cityGroundMat = new THREE.MeshLambertMaterial({ color: 0x323232 });
 
 // Cria um segundo array de UVs para funcionar o lightmap
-let uv1 = groundGeo.getAttribute('uv').array;
-groundGeo.setAttribute('uv2', new THREE.BufferAttribute(uv1, 2));
+// let uv1 = groundGeo.getAttribute('uv').array;
+// groundGeo.setAttribute('uv2', new THREE.BufferAttribute(uv1, 2));
 
-const ground = new THREE.Mesh(groundGeo, groundMat);
-ground.rotation.x = Math.PI * -0.5;
-ground.receiveShadow = true;
-ground.position.y = 2.5;
-scene.add(ground);
+const cityGround = new THREE.Mesh(cityGroundGeo, cityGroundMat);
+cityGround.rotation.x = Math.PI * -0.5;
+cityGround.receiveShadow = true;
+cityGround.position.y = 0;
+scene.add(cityGround);
+
+const streetTexture = new THREE.TextureLoader().load('assets/textures/asfalto.jpg');
+streetTexture.wrapT = THREE.RepeatWrapping;
+streetTexture.repeat.set(1, 85 / 15);
+const streetGeo = new THREE.PlaneGeometry(15, 185);
+const streetMat = new THREE.MeshLambertMaterial({ map: streetTexture });
+
+const streetTexture2 = new THREE.TextureLoader().load('assets/textures/asfalto.jpg');
+streetTexture2.wrapS = THREE.RepeatWrapping;
+streetTexture2.repeat.set(1, 1);
+const streetGeo2 = new THREE.PlaneGeometry(15, 85);
+const streetMat2 = new THREE.MeshLambertMaterial({ map: streetTexture2 });
+
+
+createStreets();
+function createStreets() {
+    for (let i = 0; i < 20; i++) {
+        for (let j = 0; j < 10; j++) {
+            const street1 = new THREE.Mesh(streetGeo, streetMat);
+
+            street1.rotation.x = -0.5 * Math.PI;
+
+            street1.position.x = -1000 + 7.5 + 100 * i;
+            street1.position.y = 0.1;
+            street1.position.z = -1000 + 92.5 + 200 * j;
+            scene.add(street1);
+
+
+            const street2 = new THREE.Mesh(streetGeo2, streetMat2);
+
+            street2.rotation.x = -0.5 * Math.PI;
+            street2.rotation.z = -0.5 * Math.PI;
+
+            street2.position.x = -1000 + 42.5 + 100 * i + 15;
+            street2.position.y = 0.1;
+            street2.position.z = -1000 - 7.5 + 200 * (j + 1);
+            scene.add(street2)
+        }
+    }
+}
+
 
 // Criação do caminho usando tube geometry
 parent = new THREE.Object3D();
@@ -148,7 +189,7 @@ const pipeSpline = new THREE.CatmullRomCurve3(points);
 const tubeGeometry = new THREE.TubeGeometry(pipeSpline, 100, 0.25, 20, false);
 const tubeMaterial = new THREE.MeshLambertMaterial({ color: '#000080' });
 const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
-parent.add(tube);
+// parent.add(tube);
 
 // Criação dos torus
 function createTorus() {
@@ -175,15 +216,15 @@ function createTorusNext() {
 const deg90 = Math.PI / 2;
 // Torus que precisa passar
 const ring = createTorus();
-scene.add(ring);
+// scene.add(ring);
 ring.position.copy(points[torusCount])
 // Próximo torus
 const nextTorus = createTorusNext();
-scene.add(nextTorus);
+// scene.add(nextTorus);
 nextTorus.position.copy(points[torusCount + 1])
 // Torus pelo qual acabou de passar
 const checkedTorus = createTorusChecekd();
-scene.add(checkedTorus);
+// scene.add(checkedTorus);
 checkedTorus.visible = false;
 
 
@@ -200,7 +241,7 @@ function onError(error) { console.error('An error happened', error); }
 let airplane
 let airPlaneRotation = new THREE.Euler(); // Salva rotacao do aviao por causa do modo inspecao
 
-loader.load('assets/airplane.glb', airplaneOnLoad, onProgress, onError);
+loader.load('assets/airplane-camuflado.glb', airplaneOnLoad, onProgress, onError);
 
 function airplaneOnLoad(gltf) {
     airplane = gltf.scene;
@@ -208,7 +249,7 @@ function airplaneOnLoad(gltf) {
     // Converte o MeshStandardMaterial para MeshPhongMaterial
     let color, transparent, opacity;
     airplane.traverse((child) => {
-        if (child.isMesh) {
+        if (child.isMesh && false) {
 
             color = child.material.color;
             transparent = child.material.transparent;
@@ -226,14 +267,14 @@ function airplaneOnLoad(gltf) {
                 child.material = new THREE.MeshPhongMaterial({ color, shininess: 40, specular: 0x11F11 })
         }
     });
-
+    // camera.lookAt(movementGroupPosition);
     rotationGroup.add(airplane);
 }
 
 // Carregamento das montanhas
 let mountains;
 
-loader.load('assets/mountains.glb', mountainsOnLoad, onProgress, onError)
+// loader.load('assets/mountains.glb', mountainsOnLoad, onProgress, onError)
 
 function mountainsOnLoad(gltf) {
     let color;
@@ -290,7 +331,7 @@ function spreadTrees(tree) {
     let intersection;
     let offset = 25;
 
-    intersection = raycaster.intersectObject(ground, true)
+    intersection = raycaster.intersectObject(cityGround, true)
 
     while (treeCount < 120) {
         newPosition.set(
@@ -302,7 +343,7 @@ function spreadTrees(tree) {
 
         raycaster.set(newPosition, direction);
 
-        intersection = raycaster.intersectObjects([ground, mountains], true)[0];
+        intersection = raycaster.intersectObjects([cityGround, mountains], true)[0];
 
         if (intersection && intersection.distance > 280) {
             // newPosition.y = intersection.distance * -1;
@@ -330,28 +371,28 @@ function toggleInspectionMode() {
             toggleCockpitMode();
         }
 
-        ground.visible = false;
-        treeGroup.visible = false;
-        mountains.visible = false;
-        movementGroupPosition.copy(movementGroup.position);
-        movementGroup.position.set(0, 1, 0)
-        airPlaneRotation.copy(airplane.rotation);
-        airplane.rotation.set(0, 0, 0);
+        cityGround.visible = false;
+        // treeGroup.visible = false;
+        // mountains.visible = false;
+        // movementGroupPosition.copy(movementGroup.position);
+        // movementGroup.position.set(0, 1, 0)
+        // airPlaneRotation.copy(airplane.rotation);
+        // airplane.rotation.set(0, 0, 0);
 
         trackballControls.enabled = true;
     }
     else {
         trackballControls.enabled = false;
 
-        ground.visible = true;
-        treeGroup.visible = true;
-        mountains.visible = true;
+        cityGround.visible = true;
+        // treeGroup.visible = true;
+        // mountains.visible = true;
         movementGroup.position.copy(movementGroupPosition);
         airplane.rotation.copy(airPlaneRotation);
 
         camera.up.set(0, 1, 0);
         camera.position.copy(cameraPosition)
-        camera.lookAt(movementGroupPosition);
+        // camera.lookAt(movementGroupPosition);
     }
 }
 
@@ -707,18 +748,165 @@ function onKeyUp(event) {
 render();
 
 function render() {
+    requestAnimationFrame(render);
 
     if (inspectionMode) {
         trackballControls.update(); // Enable mouse movements
     } else {
         updatePosition(moveClock.getDelta());
     }
-    requestAnimationFrame(render);
     renderer.render(scene, camera) // Render scene
-    detectContact();
+    // detectContact();
 
     if (start) { //Contador de tempo colocado no render para ter atualização em tempo real
         sec = clock.getElapsedTime().toFixed(2);
         infoBox.changeMessage("Checkpoints: " + torusCount + "/14 Time: " + sec + "s");
     }
+}
+
+// ------------------------------------------------------- //
+// ---------- Criação de prédios ------------------------ //
+// ----------------------------------------------------- //
+
+function building1() {
+    const building = new THREE.Object3D();
+
+    let texture = new THREE.TextureLoader().load('assets/textures/window1.jpg')
+
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1, 2);
+
+    const top = customBox(40, 80, 30, texture, 0x999395);
+    top.position.y = 40;
+    building.add(top);
+
+    return building;
+}
+
+function building2() {
+    const building = new THREE.Object3D();
+
+    let bottomTexture = new THREE.TextureLoader().load('assets/textures/granite1.jpg')
+    bottomTexture.wrapS = THREE.RepeatWrapping;
+    bottomTexture.wrapT = THREE.RepeatWrapping;
+    bottomTexture.repeat.set(2, 1);
+
+    const bottom = customBox(40, 10, 40, bottomTexture);
+    bottom.position.y = 5;
+    building.add(bottom);
+
+    let topTexture = new THREE.TextureLoader().load('assets/textures/window2.jpg')
+    topTexture.wrapS = THREE.RepeatWrapping;
+    topTexture.wrapT = THREE.RepeatWrapping;
+    topTexture.repeat.set(2, 2);
+
+    const top = customBox(30, 40, 30, topTexture, 0x566576);
+    top.position.y = 30;
+    building.add(top);
+
+    return building;
+}
+
+function building3() {
+    const building = new THREE.Object3D();
+    
+    let bottomTexture = new THREE.TextureLoader().load('assets/textures/marble1.jpg')
+    bottomTexture.wrapT = THREE.RepeatWrapping;
+    bottomTexture.repeat.set(1, 3);
+    
+    const groundGeo = new THREE.PlaneGeometry(4.5, 40);
+    const groundMat = new THREE.MeshBasicMaterial({ map: bottomTexture });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.position.y = 0.2;
+    ground.rotation.x = - Math.PI / 2;
+    building.add(ground);
+    
+    let towerTexture = new THREE.TextureLoader().load('assets/textures/window3.jpg')
+    towerTexture.wrapS = THREE.RepeatWrapping;
+    towerTexture.wrapT = THREE.RepeatWrapping;
+    towerTexture.repeat.set(0.5, 1);
+    
+    const tower1 = customBox(15, 70, 40, towerTexture);
+    tower1.position.set(9, 35, 0);
+    building.add(tower1)
+    
+    const tower2 = customBox(15, 70, 40, towerTexture);
+    tower2.position.set(-9, 35, 0);
+    building.add(tower2);
+    
+    return building;
+}
+
+function building4() {
+    const building = new THREE.Object3D();
+
+    let bottomTexture = new THREE.TextureLoader().load('assets/textures/window4.2.jpg')
+    bottomTexture.wrapS = THREE.RepeatWrapping;
+    bottomTexture.wrapT = THREE.RepeatWrapping;
+    bottomTexture.repeat.set(4, 1);
+
+    const bottomGeo = new THREE.CylinderGeometry(15, 15, 10);
+    const bottomMat = new THREE.MeshBasicMaterial({ map: bottomTexture });
+    const bottom = new THREE.Mesh(bottomGeo, bottomMat);
+    bottom.position.y = 5;
+    building.add(bottom);
+
+    let topTexture = new THREE.TextureLoader().load('assets/textures/window4.jpg')
+    topTexture.wrapS = THREE.RepeatWrapping;
+    topTexture.wrapT = THREE.RepeatWrapping;
+    topTexture.repeat.set(4, 4);
+
+    const topGeo = new THREE.CylinderGeometry(20, 20, 50, 16);
+    const topMat = new THREE.MeshBasicMaterial({ map: topTexture });
+    const top = new THREE.Mesh(topGeo, topMat);
+    top.position.y = 35;
+    building.add(top);
+
+    return building;
+}
+
+function customBox(width, height, depth, texture, topColor) {
+    const box = new THREE.Object3D();
+
+    const geo1 = new THREE.PlaneGeometry(width, height);
+    const mat1 = new THREE.MeshBasicMaterial({ map: texture });
+    const face1 = new THREE.Mesh(geo1, mat1);
+
+    face1.position.set(0, 0, -depth / 2);
+    face1.rotation.set(0, Math.PI, 0);
+    box.add(face1);
+
+    const geo2 = new THREE.PlaneGeometry(depth, height);
+    const mat2 = new THREE.MeshBasicMaterial({ map: texture });
+    const face2 = new THREE.Mesh(geo2, mat2);
+
+    face2.position.set(width / 2, 0, 0);
+    face2.rotation.set(0, Math.PI / 2, 0);
+    box.add(face2);
+
+    const geo3 = new THREE.PlaneGeometry(width, depth);
+    const mat3 = new THREE.MeshBasicMaterial({ color: topColor, map: topColor ? null : texture });
+    const face3 = new THREE.Mesh(geo3, mat3);
+
+    face3.position.set(0, height / 2, 0);
+    face3.rotation.set(-Math.PI / 2, 0, 0);
+    box.add(face3);
+
+    const face4 = face1.clone();
+    face4.position.multiplyScalar(-1);
+    face4.rotation.y = -Math.PI;
+    face4.material.map = texture;
+    face4.material.needsUpdate = true;
+    box.add(face4);
+
+    const face5 = face2.clone();
+    face5.position.multiplyScalar(-1);
+    face5.rotation.y = - Math.PI / 2;
+    face5.material.map = texture;
+    face5.material.needsUpdate = true;
+    box.add(face5);
+
+    return box;
+
 }
