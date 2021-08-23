@@ -113,7 +113,7 @@ sideWalkTexture.wrapS = THREE.RepeatWrapping;
 sideWalkTexture.wrapT = THREE.RepeatWrapping;
 sideWalkTexture.repeat.set(600, 600);
 
-const cityGroundGeo = new THREE.PlaneGeometry(2000, 2000);
+const cityGroundGeo = new THREE.PlaneGeometry(1000, 1000);
 const cityGroundMat = new THREE.MeshBasicMaterial({ map: sideWalkTexture });
 
 // Cria um segundo array de UVs para funcionar o lightmap
@@ -141,42 +141,45 @@ const streetMat2 = new THREE.MeshLambertMaterial({ map: streetTexture2 });
 
 createStreets();
 function createStreets() {
-    for (let i = 0; i < 20; i++) {
-        for (let j = 0; j < 10; j++) {
-            const street1 = new THREE.Mesh(streetGeo, streetMat);
+    for (let i = 0; i <= 10; i++) {
+        for (let j = -1; j < 5; j++) {
+            if (j > -1) {
+                const street1 = new THREE.Mesh(streetGeo, streetMat);
 
-            street1.rotation.x = -0.5 * Math.PI;
+                street1.rotation.x = -0.5 * Math.PI;
 
-            street1.position.x = -1000 + 7.5 + 100 * i;
-            street1.position.y = 0.1;
-            street1.position.z = -1000 + 92.5 + 200 * j;
-            scene.add(street1);
+                street1.position.x = -500 + 7.5 + 100 * i;
+                street1.position.y = 0.1;
+                street1.position.z = -500 + 92.5 + 200 * j;
+                scene.add(street1);
+            }
 
+            if (i < 10) {
+                const street2 = new THREE.Mesh(streetGeo2, streetMat2);
 
-            const street2 = new THREE.Mesh(streetGeo2, streetMat2);
+                street2.rotation.x = -0.5 * Math.PI;
+                street2.rotation.z = -0.5 * Math.PI;
 
-            street2.rotation.x = -0.5 * Math.PI;
-            street2.rotation.z = -0.5 * Math.PI;
-
-            street2.position.x = -1000 + 42.5 + 100 * i + 15;
-            street2.position.y = 0.1;
-            street2.position.z = -1000 - 7.5 + 200 * (j + 1);
-            scene.add(street2)
+                street2.position.x = -500 + 42.5 + 100 * i + 15;
+                street2.position.y = 0.1;
+                street2.position.z = -500 - 7.5 + 200 * (j + 1);
+                scene.add(street2)
+            }
         }
     }
 }
 
 createBuildings();
 function createBuildings() {
-    for (let i = 0; i < 20; i++) {
-        for (let j = 0; j < 20; j++) {
+    for (let i = 0; i < 10; i++) {
+        for (let j = 0; j < 10; j++) {
             const building = chooseBuilding(i + j);
 
             // building.rotation.x = -0.5 * Math.PI;
 
-            building.position.x = -1000 + 60 + 100 * i;
+            building.position.x = -500 + 60 + 100 * i;
             building.position.y = 0.1;
-            building.position.z = -1000 + 50 + 200 * j / 2;
+            building.position.z = -500 + 50 + 200 * j / 2;
             scene.add(building);
         }
     }
@@ -919,7 +922,7 @@ function customBox(width, height, depth, texture, topColor) {
     box.add(face2);
 
     const geo3 = new THREE.PlaneGeometry(width, depth);
-    const mat3 = new THREE.MeshBasicMaterial({ color: topColor, map: topColor ? null : texture });
+    const mat3 = new THREE.MeshBasicMaterial({ color: topColor || null, map: topColor ? null : texture });
     const face3 = new THREE.Mesh(geo3, mat3);
 
     face3.position.set(0, height / 2, 0);
