@@ -8,7 +8,7 @@ import {
 } from "../libs/util/util.js";
 
 const scene = new THREE.Scene();    // Create main scene
-const renderer = initRenderer({ logarithmicDepthBuffer: true});    // View function in util/utils
+const renderer = initRenderer({ logarithmicDepthBuffer: true });    // View function in util/utils
 renderer.setClearColor(0x87ceeb)
 renderer.shadowMap.enabled = true;
 
@@ -103,10 +103,10 @@ scene.add(light);
 
 // movementGroup.add(movingLight);
 
-const cameraHelper = new THREE.CameraHelper(movingLight.shadow.camera);
+// const cameraHelper = new THREE.CameraHelper(movingLight.shadow.camera);
 // scene.add(cameraHelper);
 
-const helper = new THREE.DirectionalLightHelper(movingLight, 5);
+// const helper = new THREE.DirectionalLightHelper(movingLight, 5);
 // scene.add(helper);
 
 
@@ -150,7 +150,25 @@ streetTexture2.repeat.set(1, 1);
 const streetGeo2 = new THREE.PlaneGeometry(15, 85);
 const streetMat2 = new THREE.MeshLambertMaterial({ map: streetTexture2 });
 
+// --- Criação das torres ---
 
+let tower1, tower2;
+
+gltfLoader.load('assets/tower.glb', towerOnLoad, onProgress, onError)
+
+function towerOnLoad(gltf) {
+    tower1 = gltf.scene;
+    tower1.scale.set(5, 5, 5);
+    tower1.rotation.y = Math.PI;
+    tower1.position.set(-40,0,0);
+    scene.add(tower1);
+
+    tower2 = tower1.clone();
+    tower2.position.set(55, 0, 0);
+    scene.add(tower2);
+}
+
+// --- Criação das ruas e prédios ----
 createStreets();
 function createStreets() {
     for (let i = 0; i <= 10; i++) {
@@ -184,7 +202,10 @@ function createStreets() {
 createBuildings();
 function createBuildings() {
     for (let i = 0; i < 10; i++) {
+
         for (let j = 0; j < 10; j++) {
+            if ((i == 4 || i == 5) && (j == 4 || j == 5)) continue; // deixa o local das torres vazio
+
             const building = chooseBuilding(i + j);
 
             // building.rotation.x = -0.5 * Math.PI;
