@@ -138,6 +138,7 @@ cityGround.receiveShadow = true;
 cityGround.position.y = 0;
 scene.add(cityGround);
 
+// --- Criação das ruas e prédios ----
 const streetTexture = textureLoader.load('assets/textures/asfalto.jpg');
 streetTexture.wrapT = THREE.RepeatWrapping;
 streetTexture.repeat.set(1, 85 / 15);
@@ -150,25 +151,9 @@ streetTexture2.repeat.set(1, 1);
 const streetGeo2 = new THREE.PlaneGeometry(15, 85);
 const streetMat2 = new THREE.MeshLambertMaterial({ map: streetTexture2 });
 
-// --- Criação das torres ---
+const streetGeo3 = new THREE.PlaneGeometry(15, 15);
+const streetMat3 = new THREE.MeshLambertMaterial({ color: 0x000000 });
 
-let tower1, tower2;
-
-gltfLoader.load('assets/tower.glb', towerOnLoad, onProgress, onError)
-
-function towerOnLoad(gltf) {
-    tower1 = gltf.scene;
-    tower1.scale.set(5, 5, 5);
-    tower1.rotation.y = Math.PI;
-    tower1.position.set(-40,0,0);
-    scene.add(tower1);
-
-    tower2 = tower1.clone();
-    tower2.position.set(55, 0, 0);
-    scene.add(tower2);
-}
-
-// --- Criação das ruas e prédios ----
 createStreets();
 function createStreets() {
     for (let i = 0; i <= 10; i++) {
@@ -194,9 +179,37 @@ function createStreets() {
                 street2.position.y = 0.1;
                 street2.position.z = -500 - 7.5 + 200 * (j + 1);
                 scene.add(street2)
+
             }
+
+            const street3 = new THREE.Mesh(streetGeo3, streetMat3);
+
+            street3.rotation.x = -0.5 * Math.PI;
+
+            street3.position.x = -500 + 42.5 + 100 * i - 35;
+            street3.position.y = 0.1;
+            street3.position.z = -500 - 7.5 + 200 * (j + 1);
+            scene.add(street3);
         }
     }
+}
+
+// --- Criação das torres ---
+
+let tower1, tower2;
+
+gltfLoader.load('assets/tower.glb', towerOnLoad, onProgress, onError)
+
+function towerOnLoad(gltf) {
+    tower1 = gltf.scene;
+    tower1.scale.set(5, 5, 5);
+    tower1.rotation.y = Math.PI;
+    tower1.position.set(-40, 0, 0);
+    scene.add(tower1);
+
+    tower2 = tower1.clone();
+    tower2.position.set(55, 0, 0);
+    scene.add(tower2);
 }
 
 createBuildings();
