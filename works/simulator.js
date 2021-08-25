@@ -281,6 +281,39 @@ outerGround.rotation.x = - Math.PI / 2;
 outerGround.position.y = -0.5;
 scene.add(outerGround);
 
+const sandTexture = textureLoader.load('assets/textures/sand.png');
+
+const sandGeo = new THREE.CircleGeometry(30, 50);
+const sandMat = new THREE.MeshBasicMaterial({ map: sandTexture, transparent: true });
+const sand = new THREE.Mesh(sandGeo, sandMat);
+sand.rotation.x = - Math.PI / 2;
+sand.position.set(-600, 0.1, 0);
+scene.add(sand);
+
+const leafTexture = textureLoader.load('assets/textures/leaf.png');
+leafTexture.wrapS = THREE.RepeatWrapping;
+leafTexture.wrapT = THREE.RepeatWrapping;
+leafTexture.repeat.set(800, 800);
+
+const leafGeo = new THREE.CircleGeometry(1200, 32)
+const leafMat = new THREE.MeshBasicMaterial({ map: leafTexture, transparent: true })
+const leaf = new THREE.Mesh(leafGeo, leafMat);
+leaf.rotation.x = - Math.PI / 2;
+leaf.position.y = -0.05;
+scene.add(leaf);
+
+const waterTexture = textureLoader.load('assets/textures/water.png');
+waterTexture.wrapS = THREE.RepeatWrapping;
+waterTexture.wrapT = THREE.RepeatWrapping;
+waterTexture.repeat.set(1, 1);
+
+const pondGeo = new THREE.CircleGeometry(30, 32);
+const pondMat = new THREE.MeshBasicMaterial({ map: waterTexture, transparent: true });
+const pond = new THREE.Mesh(pondGeo, pondMat);
+pond.rotation.x = - Math.PI / 2;
+pond.position.x = 550;
+scene.add(pond);
+
 // --- Carregamento das montanhas --- //
 let mountains;
 
