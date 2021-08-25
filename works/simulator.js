@@ -65,7 +65,7 @@ cameraHolder.position.copy(holderPosition);
 rotationGroup.add(cameraHolder);
 
 // -- Criação da camera --
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 4500);
 const cameraPosition = new THREE.Vector3(0, 0, -50);
 cameraHolder.add(camera);
 camera.position.copy(cameraPosition);
@@ -113,6 +113,18 @@ scene.add(light);
 // -- Lightmap das sombras das árvores --
 // let lm = textureLoader.load('assets/textures/ground-shadow.png')
 // lm.flipY = false;
+
+// --- Skybox --- //
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+const texture = cubeTextureLoader.load([
+    'assets/textures/skybox/right.bmp',
+    'assets/textures/skybox/left.bmp',
+    'assets/textures/skybox/top.bmp',
+    'assets/textures/skybox/bottom.bmp',
+    'assets/textures/skybox/front.bmp',
+    'assets/textures/skybox/back.bmp',
+]);
+scene.background = texture;
 
 
 // ------------------------------------------------------- //
@@ -249,12 +261,12 @@ function createBuildings() {
 
 // ---- Chao da periferia --- //
 const grassTexture = textureLoader.load('assets/textures/grass.jpg');
-grassTexture.wrapS = THREE.MirroredRepeatWrapping;
-grassTexture.wrapT = THREE.MirroredRepeatWrapping;
-grassTexture.repeat.set(1000, 1000);
+grassTexture.wrapS = THREE.RepeatWrapping;
+grassTexture.wrapT = THREE.RepeatWrapping;
+grassTexture.repeat.set(1500, 1500);
 
 const outskirtsGround = new THREE.Mesh(
-    new THREE.PlaneGeometry(5000, 5000),
+    new THREE.PlaneGeometry(7500, 7500),
     new THREE.MeshBasicMaterial({ map: grassTexture })
 );
 outskirtsGround.rotation.x = - Math.PI / 2;
