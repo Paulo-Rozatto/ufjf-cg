@@ -53,6 +53,7 @@ speedBox.box.style.right = "0";
 // -- Criação de grupos que auxiliam a movimentação e rotação --
 const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
 const movementGroupPosition = new THREE.Vector3(7.5, 15, -30); // Salva posicao do grupo para voltar do modo inspecao
+const movementGroupRotation = new THREE.Euler(); // Salva rotacao do grupo para voltar do modo inspecao
 movementGroup.position.copy(movementGroupPosition);
 scene.add(movementGroup);
 
@@ -69,7 +70,6 @@ const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerH
 const cameraPosition = new THREE.Vector3(0, 0, -50);
 cameraHolder.add(camera);
 camera.position.copy(cameraPosition);
-camera.lookAt(movementGroupPosition);
 
 // -- Trackball controls para o modo inspeção --
 const trackballControls = new TrackballControls(camera, renderer.domElement);
@@ -130,6 +130,8 @@ scene.background = texture;
 // ------------------------------------------------------- //
 // ---------- Criação da Cidade ------------------------- //
 // ----------------------------------------------------- //
+const cityGroup = new THREE.Group();
+scene.add(cityGroup);
 
 // -- Criação do chão --
 const sideWalkTexture = textureLoader.load('assets/textures/sidewalk.jpg');
@@ -148,7 +150,7 @@ const cityGround = new THREE.Mesh(cityGroundGeo, cityGroundMat);
 cityGround.rotation.x = Math.PI * -0.5;
 cityGround.receiveShadow = true;
 cityGround.position.y = 0;
-scene.add(cityGround);
+cityGroup.add(cityGround);
 
 // --- Criação das ruas e prédios ----
 const streetTexture = textureLoader.load('assets/textures/asfalto.jpg');
@@ -178,7 +180,7 @@ function createStreets() {
                 street1.position.x = -500 + 7.5 + 100 * i;
                 street1.position.y = 0.1;
                 street1.position.z = -500 + 92.5 + 200 * j;
-                scene.add(street1);
+                cityGroup.add(street1);
             }
 
             if (i < 10) {
@@ -190,7 +192,7 @@ function createStreets() {
                 street2.position.x = -500 + 42.5 + 100 * i + 15;
                 street2.position.y = 0.1;
                 street2.position.z = -500 - 7.5 + 200 * (j + 1);
-                scene.add(street2)
+                cityGroup.add(street2)
 
             }
 
@@ -201,7 +203,7 @@ function createStreets() {
             street3.position.x = -500 + 42.5 + 100 * i - 35;
             street3.position.y = 0.1;
             street3.position.z = -500 - 7.5 + 200 * (j + 1);
-            scene.add(street3);
+            cityGroup.add(street3);
         }
     }
 }
@@ -217,11 +219,11 @@ function towerOnLoad(gltf) {
     tower1.scale.set(5, 5, 5);
     tower1.rotation.y = Math.PI;
     tower1.position.set(-40, 0, 0);
-    scene.add(tower1);
+    cityGroup.add(tower1);
 
     tower2 = tower1.clone();
     tower2.position.set(55, 0, 0);
-    scene.add(tower2);
+    cityGroup.add(tower2);
 }
 
 createBuildings();
@@ -238,7 +240,7 @@ function createBuildings() {
             building.position.x = -500 + 60 + 100 * i;
             building.position.y = 0.1;
             building.position.z = -500 + 50 + 200 * j / 2;
-            scene.add(building);
+            cityGroup.add(building);
         }
     }
 
@@ -258,6 +260,8 @@ function createBuildings() {
 // ------------------------------------------------------- //
 // ---------- Criação da Periferia ----------------------- //
 // ------------------------------------------------------- //
+const outskirtsGroup = new THREE.Group();
+scene.add(outskirtsGroup);
 
 // ---- Chao da periferia --- //
 const grassTexture = textureLoader.load('assets/textures/grass.jpg');
@@ -271,7 +275,7 @@ const outskirtsGround = new THREE.Mesh(
 );
 outskirtsGround.rotation.x = - Math.PI / 2;
 outskirtsGround.position.y = -0.1;
-scene.add(outskirtsGround);
+outskirtsGroup.add(outskirtsGround);
 
 const outerGround = new THREE.Mesh(
     new THREE.PlaneBufferGeometry(20000, 20000),
@@ -279,7 +283,7 @@ const outerGround = new THREE.Mesh(
 );
 outerGround.rotation.x = - Math.PI / 2;
 outerGround.position.y = -0.5;
-scene.add(outerGround);
+outskirtsGroup.add(outerGround);
 
 const sandTexture = textureLoader.load('assets/textures/sand.png');
 
@@ -288,7 +292,7 @@ const sandMat = new THREE.MeshBasicMaterial({ map: sandTexture, transparent: tru
 const sand = new THREE.Mesh(sandGeo, sandMat);
 sand.rotation.x = - Math.PI / 2;
 sand.position.set(-600, 0.1, 0);
-scene.add(sand);
+outskirtsGroup.add(sand);
 
 const leafTexture = textureLoader.load('assets/textures/leaf.png');
 leafTexture.wrapS = THREE.RepeatWrapping;
@@ -300,7 +304,7 @@ const leafMat = new THREE.MeshBasicMaterial({ map: leafTexture, transparent: tru
 const leaf = new THREE.Mesh(leafGeo, leafMat);
 leaf.rotation.x = - Math.PI / 2;
 leaf.position.y = -0.05;
-scene.add(leaf);
+outskirtsGroup.add(leaf);
 
 const waterTexture = textureLoader.load('assets/textures/water.png');
 waterTexture.wrapS = THREE.RepeatWrapping;
@@ -312,7 +316,7 @@ const pondMat = new THREE.MeshBasicMaterial({ map: waterTexture, transparent: tr
 const pond = new THREE.Mesh(pondGeo, pondMat);
 pond.rotation.x = - Math.PI / 2;
 pond.position.x = 550;
-scene.add(pond);
+outskirtsGroup.add(pond);
 
 // --- Carregamento das montanhas --- //
 let mountains;
@@ -334,7 +338,7 @@ function mountainsOnLoad(gltf) {
             child.receiveShadow = true;
         }
     });
-    scene.add(mountains);
+    outskirtsGroup.add(mountains);
     setTimeout(() => {
         gltfLoader.load('assets/tree1.glb', treeOnLoad, onProgress, onError);
     }, 500);
@@ -342,7 +346,7 @@ function mountainsOnLoad(gltf) {
 
 // Carregamento do modelo da árvore
 const treeGroup = new THREE.Group();
-scene.add(treeGroup);
+outskirtsGroup.add(treeGroup);
 
 // gltfLoader.load('assets/tree1.glb', treeOnLoad, onProgress, onError);
 
@@ -390,7 +394,6 @@ function spreadTrees(tree) {
 
             if (intersection.length > 0) {
                 clone.position.y = intersection[0].point.y;
-                console.log(intersection);
             }
 
             treeGroup.add(clone);
@@ -508,7 +511,7 @@ function airplaneOnLoad(gltf) {
                 child.material = new THREE.MeshPhongMaterial({ color, shininess: 40, specular: 0x11F11 })
         }
     });
-    // camera.lookAt(movementGroupPosition);
+    camera.lookAt(movementGroupPosition);
     rotationGroup.add(airplane);
 }
 
@@ -520,33 +523,38 @@ function airplaneOnLoad(gltf) {
 function toggleInspectionMode() {
     inspectionMode = !inspectionMode;
 
+    
     if (inspectionMode) {
         if (cockpitMode) {
             toggleCockpitMode();
         }
+        
+        cityGroup.visible = false;
+        outskirtsGroup.visible = false;
+        
+        movementGroupPosition.copy(movementGroup.position);
+        movementGroupRotation.copy(movementGroup.rotation);
+        movementGroup.position.set(0, 1, 0)
 
-        cityGround.visible = false;
-        // treeGroup.visible = false;
-        // mountains.visible = false;
-        // movementGroupPosition.copy(movementGroup.position);
-        // movementGroup.position.set(0, 1, 0)
-        // airPlaneRotation.copy(airplane.rotation);
-        // airplane.rotation.set(0, 0, 0);
-
+        airPlaneRotation.copy(airplane.rotation);
+        airplane.rotation.set(0, 0, 0);
+        
         trackballControls.enabled = true;
     }
     else {
         trackballControls.enabled = false;
-
-        cityGround.visible = true;
-        // treeGroup.visible = true;
-        // mountains.visible = true;
+        
+        cityGroup.visible = true;
+        outskirtsGroup.visible = true;
+        
         movementGroup.position.copy(movementGroupPosition);
+        movementGroupRotation.rotation.copy(movementGroupRotation);
+        
         airplane.rotation.copy(airPlaneRotation);
-
+        
         camera.up.set(0, 1, 0);
         camera.position.copy(cameraPosition)
-        // camera.lookAt(movementGroupPosition);
+        camera.lookAt(movementGroupPosition);
     }
 }
 
