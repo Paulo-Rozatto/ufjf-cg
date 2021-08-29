@@ -245,14 +245,16 @@ function createBuildings() {
     }
 
     function chooseBuilding(t) {
-        let i = Math.floor(3 * Math.sin(t)) + 1;
+        let i = Math.abs(Math.floor(5 * Math.sin(t))) + 1;
+        console.log(i);
 
         switch (i) {
             case 1: return building1();
             case 2: return building2();
             case 3: return building3();
-            default: return building4();
-            // default: return building3();
+            case 4: return building4();
+            case 5: return building5();
+            case 6: return building6();
         }
     }
 }
@@ -523,35 +525,35 @@ function airplaneOnLoad(gltf) {
 function toggleInspectionMode() {
     inspectionMode = !inspectionMode;
 
-    
+
     if (inspectionMode) {
         if (cockpitMode) {
             toggleCockpitMode();
         }
-        
+
         cityGroup.visible = false;
         outskirtsGroup.visible = false;
-        
+
         movementGroupPosition.copy(movementGroup.position);
         movementGroupRotation.copy(movementGroup.rotation);
         movementGroup.position.set(0, 1, 0)
 
         airPlaneRotation.copy(airplane.rotation);
         airplane.rotation.set(0, 0, 0);
-        
+
         trackballControls.enabled = true;
     }
     else {
         trackballControls.enabled = false;
-        
+
         cityGroup.visible = true;
         outskirtsGroup.visible = true;
-        
+
         movementGroup.position.copy(movementGroupPosition);
         movementGroupRotation.rotation.copy(movementGroupRotation);
-        
+
         airplane.rotation.copy(airPlaneRotation);
-        
+
         camera.up.set(0, 1, 0);
         camera.position.copy(cameraPosition)
         camera.lookAt(movementGroupPosition);
@@ -1028,6 +1030,73 @@ function building4() {
     return building;
 }
 
+function building5() {
+    const building = new THREE.Object3D();
+
+    let texture = textureLoader.load('assets/textures/window5.jpg')
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(4, 6);
+
+    const mid = customBox(37, 50, 37, texture, 0x566576);
+    mid.position.y = 25;
+    building.add(mid);
+
+    const top = customBox(30, 30, 30, texture, 0x566576);
+    top.position.y = 60;
+    building.add(top);
+
+    return building;
+}
+
+function building6() {
+    const building = new THREE.Object3D();
+
+    let topTexture = textureLoader.load('assets/textures/window6.jpg');
+    topTexture.wrapS = THREE.RepeatWrapping;
+    topTexture.wrapT = THREE.RepeatWrapping;
+    topTexture.repeat.set(4, 4);
+
+    let bottomTexture = textureLoader.load('assets/textures/window6.2.jpg');
+    bottomTexture.wrapS = THREE.RepeatWrapping;
+    bottomTexture.wrapT = THREE.RepeatWrapping;
+    bottomTexture.repeat.set(1, 1);
+
+    let columnTexture = textureLoader.load('assets/textures/column.jpg');
+    columnTexture.wrapS = THREE.RepeatWrapping;
+    columnTexture.wrapT = THREE.RepeatWrapping;
+    columnTexture.repeat.set(3,1);
+
+    const bottom = customBox(15, 10, 15, bottomTexture, 0xBDC3B3);
+    bottom.position.y = 5;
+    building.add(bottom);
+
+    const top = customBox(40, 40, 40, topTexture, 0xBDB9B3);
+    top.position.y = 30;
+    building.add(top);
+
+    const column1 = new THREE.Mesh(
+        new THREE.CylinderGeometry(2, 2, 10, 24),
+        new THREE.MeshBasicMaterial({map: columnTexture})
+    );
+    column1.position.set(15, 5, 15);
+    building.add(column1);
+
+    const column2 = column1.clone();
+    column2.position.set(-15, 5 , 15);
+    building.add(column2);
+
+    const column3 = column1.clone();
+    column3.position.set(-15, 5 , -15);
+    building.add(column3);
+    
+    const column4 = column1.clone();
+    column4.position.set(15, 5 , -15);
+    building.add(column4);
+
+    return building;
+}
+
 function customBox(width, height, depth, texture, topColor) {
     const box = new THREE.Object3D();
 
@@ -1068,6 +1137,11 @@ function customBox(width, height, depth, texture, topColor) {
     face5.material.map = texture;
     face5.material.needsUpdate = true;
     box.add(face5);
+
+    const face6 = face3.clone();
+    face6.position.set(0, - height / 2, 0);
+    face6.rotation.set(Math.PI / 2, 0, 0);
+    box.add(face6);
 
     return box;
 
