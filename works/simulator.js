@@ -34,8 +34,20 @@ let sec = 0;
 // ---------------------------------------- //
 // ---------- Carregadores ---------------- //
 // ---------------------------------------- //
-const gltfLoader = new GLTFLoader();
-const textureLoader = new THREE.TextureLoader();
+//LoadScreen
+const loadingManager = new THREE.LoadingManager( () => {
+	
+    const loadingScreen = document.getElementById( 'loading-screen' );
+    loadingScreen.classList.add( 'fade-out' );
+    
+    // optional: remove loader from DOM via event listener
+    loadingScreen.addEventListener( 'transitionend', onTransitionEnd );
+    
+} );
+
+
+const gltfLoader = new GLTFLoader(loadingManager);
+const textureLoader = new THREE.TextureLoader(loadingManager);
 
 
 // Callbacks em comum do carregamento de objetos
@@ -133,7 +145,7 @@ scene.add(hemisphereLight);
  lm.flipY = false;
 
 // --- Skybox --- //
-const cubeTextureLoader = new THREE.CubeTextureLoader();
+const cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager);
 const texture = cubeTextureLoader.load([
     'assets/textures/skybox/right.bmp',
     'assets/textures/skybox/left.bmp',
@@ -153,7 +165,7 @@ var listener = new THREE.AudioListener();
 const sound = new THREE.Audio( listener );  
 
 // Create ambient sound
-var audioLoader = new THREE.AudioLoader();
+var audioLoader = new THREE.AudioLoader(loadingManager);
 audioLoader.load( './assets/sounds/sampleMusic.mp3', function( buffer ) {
 	sound.setBuffer( buffer );
 	sound.setLoop( true );
@@ -1215,3 +1227,10 @@ function customBox(width, height, depth, texture, topColor) {
     return box;
 
 }
+
+function onTransitionEnd(event) {
+
+    const element = event.target;
+    element.remove();
+  
+  }
