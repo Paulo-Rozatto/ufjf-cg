@@ -246,7 +246,6 @@ function createBuildings() {
 
     function chooseBuilding(t) {
         let i = Math.abs(Math.floor(5 * Math.sin(t))) + 1;
-        console.log(i);
 
         switch (i) {
             case 1: return building1();
@@ -287,6 +286,20 @@ outerGround.rotation.x = - Math.PI / 2;
 outerGround.position.y = -0.5;
 outskirtsGroup.add(outerGround);
 
+const rocksTexture = textureLoader.load('assets/textures/stones.png');
+rocksTexture.wrapS = THREE.RepeatWrapping;
+rocksTexture.wrapT = THREE.MirroredRepeatWrapping;
+rocksTexture.repeat.set(1, 2);
+
+const rocks = new THREE.Mesh(
+    new THREE.PlaneBufferGeometry(40, 80),
+    new THREE.MeshBasicMaterial({ map: rocksTexture, transparent: true })
+);
+rocks.rotation.x = - Math.PI / 2;
+rocks.rotation.z = Math.PI / 2;
+rocks.position.set(0, 0.1, -560);
+outskirtsGroup.add(rocks);
+
 const sandTexture = textureLoader.load('assets/textures/sand.png');
 
 const sandGeo = new THREE.CircleGeometry(30, 50);
@@ -299,14 +312,13 @@ outskirtsGroup.add(sand);
 const leafTexture = textureLoader.load('assets/textures/leaf.png');
 leafTexture.wrapS = THREE.RepeatWrapping;
 leafTexture.wrapT = THREE.RepeatWrapping;
-leafTexture.repeat.set(800, 800);
+leafTexture.repeat.set(2, 2);
 
-const leafGeo = new THREE.CircleGeometry(1200, 32)
+const leafGeo = new THREE.CircleGeometry(7, 32)
 const leafMat = new THREE.MeshBasicMaterial({ map: leafTexture, transparent: true })
 const leaf = new THREE.Mesh(leafGeo, leafMat);
 leaf.rotation.x = - Math.PI / 2;
 leaf.position.y = -0.05;
-outskirtsGroup.add(leaf);
 
 const waterTexture = textureLoader.load('assets/textures/water.png');
 waterTexture.wrapS = THREE.RepeatWrapping;
@@ -317,7 +329,7 @@ const pondGeo = new THREE.CircleGeometry(30, 32);
 const pondMat = new THREE.MeshBasicMaterial({ map: waterTexture, transparent: true });
 const pond = new THREE.Mesh(pondGeo, pondMat);
 pond.rotation.x = - Math.PI / 2;
-pond.position.x = 550;
+pond.position.x = 580;
 outskirtsGroup.add(pond);
 
 // --- Carregamento das montanhas --- //
@@ -370,6 +382,7 @@ function treeOnLoad(gltf) {
 
 function spreadTrees(tree) {
     let clone;
+    let leafClone;
     let radius = 740;
     let offset = 20;
     let growthRate = 50;
@@ -396,6 +409,14 @@ function spreadTrees(tree) {
 
             if (intersection.length > 0) {
                 clone.position.y = intersection[0].point.y;
+            }
+            else {
+                leafClone = leaf.clone();
+                leafClone.position.x = clone.position.x;
+                // leafClone.position.y = -0.05;
+                leafClone.position.z = clone.position.z;
+                // outskirtsGroup.add(leafClone);
+                scene.add(leafClone)
             }
 
             treeGroup.add(clone);
@@ -1065,7 +1086,7 @@ function building6() {
     let columnTexture = textureLoader.load('assets/textures/column.jpg');
     columnTexture.wrapS = THREE.RepeatWrapping;
     columnTexture.wrapT = THREE.RepeatWrapping;
-    columnTexture.repeat.set(3,1);
+    columnTexture.repeat.set(3, 1);
 
     const bottom = customBox(15, 10, 15, bottomTexture, 0xBDC3B3);
     bottom.position.y = 5;
@@ -1077,21 +1098,21 @@ function building6() {
 
     const column1 = new THREE.Mesh(
         new THREE.CylinderGeometry(2, 2, 10, 24),
-        new THREE.MeshBasicMaterial({map: columnTexture})
+        new THREE.MeshBasicMaterial({ map: columnTexture })
     );
     column1.position.set(15, 5, 15);
     building.add(column1);
 
     const column2 = column1.clone();
-    column2.position.set(-15, 5 , 15);
+    column2.position.set(-15, 5, 15);
     building.add(column2);
 
     const column3 = column1.clone();
-    column3.position.set(-15, 5 , -15);
+    column3.position.set(-15, 5, -15);
     building.add(column3);
-    
+
     const column4 = column1.clone();
-    column4.position.set(15, 5 , -15);
+    column4.position.set(15, 5, -15);
     building.add(column4);
 
     return building;
