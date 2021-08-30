@@ -4,9 +4,9 @@ import { GLTFLoader } from '../build/jsm/loaders/GLTFLoader.js';
 import {
     initRenderer,
     SecondaryBox,
+    InfoBox,
     onWindowResize,
 } from "../libs/util/util.js";
-
 const scene = new THREE.Scene();    // Create main scene
 const renderer = initRenderer({ logarithmicDepthBuffer: true });    // View function in util/utils
 renderer.setClearColor(0x87ceeb)
@@ -37,6 +37,7 @@ let sec = 0;
 const gltfLoader = new GLTFLoader();
 const textureLoader = new THREE.TextureLoader();
 
+
 // Callbacks em comum do carregamento de objetos
 function onProgress(xhr) { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); }
 function onError(error) { console.error('An error happened', error); }
@@ -44,8 +45,29 @@ function onError(error) { console.error('An error happened', error); }
 // ----------------------------------------------------- //
 // ---------- Declareção dos objetos da cena ---------- //
 // --------------------------------------------------- //
-const infoBox = new SecondaryBox("Checkpoints: " + torusCount + "/14");
+const infoBox1 = new SecondaryBox("Checkpoints: " + torusCount + "/14");
+//Adicionadas informações de controle
 
+var controls = new InfoBox("Controls:\n ce besta " );
+controls.infoBox.style.backgroundColor = "black";
+console.log(controls.infoBox.style)
+controls.infoBox.style.height = "250px" ;
+controls.infoBox.style.color = "blue"
+controls.infoBox.style.top = "0";
+controls.infoBox.style.padding = "6px 6px";
+controls.add("Movement controls");
+controls.addParagraph();
+controls.add("Keyboard:");            
+controls.add("* Q | A - Speed Up | Speed Down");
+controls.add("* Arrow Down | Arrow UP - up | down");
+controls.add("* Aroow Left | Arrow Right - left | right");
+controls.addParagraph();    
+controls.add("Camera modes:");            
+controls.add("* SPACE - Inspection Mode");        
+controls.add("* C - Cockpit Mode");
+controls.add("* ENTER - Show/Hide Path");
+controls.add("* H - Show/Hide controls")
+controls.show();
 const speedBox = new SecondaryBox("0 m/s");
 speedBox.box.style.left = "auto";
 speedBox.box.style.right = "0";
@@ -55,6 +77,7 @@ const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera 
 const movementGroupPosition = new THREE.Vector3(7.5, 15, -30); // Salva posicao do grupo para voltar do modo inspecao
 movementGroup.position.copy(movementGroupPosition);
 scene.add(movementGroup);
+
 
 const rotationGroup = new THREE.Group();
 movementGroup.add(rotationGroup);
@@ -76,43 +99,40 @@ const trackballControls = new TrackballControls(camera, renderer.domElement);
 trackballControls.enabled = false;
 
 // -- Criação das luzes --
-const hemisphereLight = new THREE.HemisphereLight(0xa7ceeb, 0x234423, 1.6);
+const hemisphereLight = new THREE.HemisphereLight('#1E90FF', '#D2691E', 0.3);
 scene.add(hemisphereLight);
 
-const light = new THREE.DirectionalLight(0xffffff, 1); // Luz padrão
-light.position.set(400, 300, -600);
-scene.add(light);
 
 // Luz que acompanha o avião para projetar sua sombra e das árvores próximas
-// const movingLight = new THREE.DirectionalLight(0xffffff, 1);
-// movingLight.castShadow = true;
-// movingLight.position.set(400, 300, -600);
+ const movingLight = new THREE.DirectionalLight(0xffffff, 1);
+ movingLight.castShadow = true;
+ movingLight.position.set(400, 300, -600);
 
-// movingLight.shadow.mapSize.width = 1024; // default
-// movingLight.shadow.mapSize.height = 1024; // default
-// movingLight.shadow.camera.far = 1500;
-// movingLight.shadow.camera.right = 100
-// movingLight.shadow.camera.left = -100;
-// movingLight.shadow.camera.top = 100;
-// movingLight.shadow.camera.bottom = -100;
+ movingLight.shadow.mapSize.width = 1024; // default
+ movingLight.shadow.mapSize.height = 1024; // default
+ movingLight.shadow.camera.far = 1500;
+ movingLight.shadow.camera.right = 300
+ movingLight.shadow.camera.left = -300;
+ movingLight.shadow.camera.top = 300;
+ movingLight.shadow.camera.bottom = -300;
 
-// const target = new THREE.Object3D();
-// movementGroup.add(target);
+ const target = new THREE.Object3D();
+ movementGroup.add(target);
 
-// movingLight.target = target;
+ movingLight.target = target;
 
-// movementGroup.add(movingLight);
+ movementGroup.add(movingLight);
 
-// const cameraHelper = new THREE.CameraHelper(movingLight.shadow.camera);
-// scene.add(cameraHelper);
+ const cameraHelper = new THREE.CameraHelper(movingLight.shadow.camera);
+ scene.add(cameraHelper);
 
-// const helper = new THREE.DirectionalLightHelper(movingLight, 5);
-// scene.add(helper);
+ const helper = new THREE.DirectionalLightHelper(movingLight, 5);
+ scene.add(helper);
 
 
 // -- Lightmap das sombras das árvores --
-// let lm = textureLoader.load('assets/textures/ground-shadow.png')
-// lm.flipY = false;
+ let lm = textureLoader.load('assets/textures/ground-shadow.png')
+ lm.flipY = false;
 
 // --- Skybox --- //
 const cubeTextureLoader = new THREE.CubeTextureLoader();
@@ -125,8 +145,25 @@ const texture = cubeTextureLoader.load([
     'assets/textures/skybox/back.bmp',
 ]);
 scene.background = texture;
+//------Adição dos sons----///
 
+var firstPlay = false;
+var listener = new THREE.AudioListener();
+  movementGroup.add( listener );
 
+// create a global audio source
+const sound = new THREE.Audio( listener );  
+
+// Create ambient sound
+var audioLoader = new THREE.AudioLoader();
+audioLoader.load( './assets/sounds/sampleMusic.mp3', function( buffer ) {
+	sound.setBuffer( buffer );
+	sound.setLoop( true );
+	sound.setVolume( 1 );
+});
+
+sound.play();
+movementGroup.add(sound);
 // ------------------------------------------------------- //
 // ---------- Criação da Cidade ------------------------- //
 // ----------------------------------------------------- //
@@ -146,8 +183,20 @@ const cityGroundMat = new THREE.MeshBasicMaterial({ map: sideWalkTexture });
 
 const cityGround = new THREE.Mesh(cityGroundGeo, cityGroundMat);
 cityGround.rotation.x = Math.PI * -0.5;
+cityGround.material.shadowSide = 5;
 cityGround.receiveShadow = true;
 cityGround.position.y = 0;
+
+let color;
+cityGround.traverse((child) => {
+    if (child.isMesh) {
+        console.log(child.material.color)
+        color = child.material.color;
+        child.material = new THREE.MeshLambertMaterial({ color });
+        child.receiveShadow = true;
+    }
+});
+
 scene.add(cityGround);
 
 // --- Criação das ruas e prédios ----
@@ -155,15 +204,18 @@ const streetTexture = textureLoader.load('assets/textures/asfalto.jpg');
 streetTexture.wrapT = THREE.RepeatWrapping;
 streetTexture.repeat.set(1, 85 / 15);
 const streetGeo = new THREE.PlaneGeometry(15, 185);
+streetGeo.receiveShadow = true;
 const streetMat = new THREE.MeshLambertMaterial({ map: streetTexture });
 
 const streetTexture2 = textureLoader.load('assets/textures/asfalto.jpg');
 streetTexture2.wrapS = THREE.RepeatWrapping;
 streetTexture2.repeat.set(1, 1);
 const streetGeo2 = new THREE.PlaneGeometry(15, 85);
+streetGeo2.receiveShadow = true;
 const streetMat2 = new THREE.MeshLambertMaterial({ map: streetTexture2 });
 
 const streetGeo3 = new THREE.PlaneGeometry(15, 15);
+streetGeo3.receiveShadow = true;
 const streetMat3 = new THREE.MeshLambertMaterial({ color: 0x000000 });
 
 createStreets();
@@ -178,6 +230,7 @@ function createStreets() {
                 street1.position.x = -500 + 7.5 + 100 * i;
                 street1.position.y = 0.1;
                 street1.position.z = -500 + 92.5 + 200 * j;
+                street1.receiveShadow = true;
                 scene.add(street1);
             }
 
@@ -190,6 +243,7 @@ function createStreets() {
                 street2.position.x = -500 + 42.5 + 100 * i + 15;
                 street2.position.y = 0.1;
                 street2.position.z = -500 - 7.5 + 200 * (j + 1);
+                street2.receiveShadow = true;
                 scene.add(street2)
 
             }
@@ -201,6 +255,7 @@ function createStreets() {
             street3.position.x = -500 + 42.5 + 100 * i - 35;
             street3.position.y = 0.1;
             street3.position.z = -500 - 7.5 + 200 * (j + 1);
+            street3.receiveShadow = true;
             scene.add(street3);
         }
     }
@@ -218,6 +273,17 @@ function towerOnLoad(gltf) {
     tower1.rotation.y = Math.PI;
     tower1.position.set(-40, 0, 0);
     scene.add(tower1);
+
+    let color;
+    // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
+    tower1.traverse((child) => {
+        if (child.isMesh) {
+            console.log(child.material.color)
+            color = child.material.color;
+            child.material = new THREE.MeshLambertMaterial({ color });
+            child.receiveShadow = true;
+        }
+    });
 
     tower2 = tower1.clone();
     tower2.position.set(55, 0, 0);
@@ -329,6 +395,7 @@ function mountainsOnLoad(gltf) {
     // Converte o MeshStandardMaterial para MeshLambertMaterial (material de Gouraud)
     mountains.traverse((child) => {
         if (child.isMesh) {
+            console.log(child.material.color)
             color = child.material.color;
             child.material = new THREE.MeshLambertMaterial({ color });
             child.receiveShadow = true;
@@ -490,7 +557,7 @@ function airplaneOnLoad(gltf) {
     // Converte o MeshStandardMaterial para MeshPhongMaterial
     let color, transparent, opacity;
     airplane.traverse((child) => {
-        if (child.isMesh && false) {
+        if (child.isMesh) {
 
             color = child.material.color;
             transparent = child.material.transparent;
@@ -547,6 +614,7 @@ function toggleInspectionMode() {
         camera.up.set(0, 1, 0);
         camera.position.copy(cameraPosition)
         // camera.lookAt(movementGroupPosition);
+
     }
 }
 
@@ -873,6 +941,9 @@ function onKeyDown(event) {
             parent.visible = !parent.visible;
             break;
         }
+        case 'h': {
+            controls.infoBox.hidden = !controls.infoBox.hidden;
+        }
     }
 }
 
@@ -911,10 +982,9 @@ function render() {
     }
     renderer.render(scene, camera) // Render scene
     // detectContact();
-
     if (start) { //Contador de tempo colocado no render para ter atualização em tempo real
         sec = clock.getElapsedTime().toFixed(2);
-        infoBox.changeMessage("Checkpoints: " + torusCount + "/14 Time: " + sec + "s");
+        infoBox1.changeMessage("Checkpoints: " + torusCount + "/14 Time: " + sec + "s");
     }
 }
 
@@ -935,6 +1005,14 @@ function building1() {
     top.position.y = 40;
     building.add(top);
 
+    let color;
+    building.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+            //child.material = new THREE.MeshLambertMaterial({ color });
+            child.receiveShadow = true;
+        }
+    });
     return building;
 }
 
@@ -959,6 +1037,15 @@ function building2() {
     top.position.y = 30;
     building.add(top);
 
+    let color;
+    building.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+            child.material = new THREE.MeshLambertMaterial({ color });
+            child.castShadow = true;
+            child.receiveShadow = true;
+        }
+    });
     return building;
 }
 
@@ -989,6 +1076,15 @@ function building3() {
     tower2.position.set(-9, 35, 0);
     building.add(tower2);
 
+    let color;
+    building.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+            child.material = new THREE.MeshLambertMaterial({ color });
+            child.castShadow = true;
+            child.receiveShadow = true;
+        }
+    });
     return building;
 }
 
@@ -1016,7 +1112,15 @@ function building4() {
     const top = new THREE.Mesh(topGeo, topMat);
     top.position.y = 35;
     building.add(top);
-
+    let color;
+    building.traverse((child) => {
+        if (child.isMesh) {
+            color = child.material.color;
+            child.material = new THREE.MeshLambertMaterial({ color });
+            child.castShadow = true;
+            child.receiveShadow = true;
+        }
+    });
     return building;
 }
 
