@@ -228,12 +228,13 @@ function towerOnLoad(gltf) {
 
 createBuildings();
 function createBuildings() {
-    for (let i = 0; i < 10; i++) {
+    let next = 1;
 
+    for (let i = 0; i < 10; i++) {
         for (let j = 0; j < 10; j++) {
             if ((i == 4 || i == 5) && (j == 4 || j == 5)) continue; // deixa o local das torres vazio
 
-            const building = chooseBuilding(i + j);
+            const building = chooseBuilding(j);
 
             // building.rotation.x = -0.5 * Math.PI;
 
@@ -245,9 +246,9 @@ function createBuildings() {
     }
 
     function chooseBuilding(t) {
-        let i = Math.abs(Math.floor(5 * Math.sin(t))) + 1;
+        next = next > 5 ? 1 : next + 1;
 
-        switch (i) {
+        switch (next) {
             case 1: return building1();
             case 2: return building2();
             case 3: return building3();
@@ -413,10 +414,8 @@ function spreadTrees(tree) {
             else {
                 leafClone = leaf.clone();
                 leafClone.position.x = clone.position.x;
-                // leafClone.position.y = -0.05;
                 leafClone.position.z = clone.position.z;
-                // outskirtsGroup.add(leafClone);
-                scene.add(leafClone)
+                outskirtsGroup.add(leafClone);
             }
 
             treeGroup.add(clone);
@@ -556,8 +555,8 @@ function toggleInspectionMode() {
         outskirtsGroup.visible = false;
 
         movementGroupPosition.copy(movementGroup.position);
-        movementGroupRotation.copy(movementGroup.rotation);
         movementGroup.position.set(0, 1, 0)
+        angularVel.multiplyScalar(0);
 
         airPlaneRotation.copy(airplane.rotation);
         airplane.rotation.set(0, 0, 0);
@@ -571,9 +570,6 @@ function toggleInspectionMode() {
         outskirtsGroup.visible = true;
 
         movementGroup.position.copy(movementGroupPosition);
-        movementGroupRotation.rotation.copy(movementGroupRotation);
-
-        airplane.rotation.copy(airPlaneRotation);
 
         camera.up.set(0, 1, 0);
         camera.position.copy(cameraPosition)
