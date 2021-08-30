@@ -4,9 +4,9 @@ import { GLTFLoader } from '../build/jsm/loaders/GLTFLoader.js';
 import {
     initRenderer,
     SecondaryBox,
+    InfoBox,
     onWindowResize,
 } from "../libs/util/util.js";
-
 const scene = new THREE.Scene();    // Create main scene
 const renderer = initRenderer({ logarithmicDepthBuffer: true });    // View function in util/utils
 renderer.setClearColor(0x87ceeb)
@@ -37,6 +37,7 @@ let sec = 0;
 const gltfLoader = new GLTFLoader();
 const textureLoader = new THREE.TextureLoader();
 
+
 // Callbacks em comum do carregamento de objetos
 function onProgress(xhr) { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); }
 function onError(error) { console.error('An error happened', error); }
@@ -44,8 +45,28 @@ function onError(error) { console.error('An error happened', error); }
 // ----------------------------------------------------- //
 // ---------- Declareção dos objetos da cena ---------- //
 // --------------------------------------------------- //
-const infoBox = new SecondaryBox("Checkpoints: " + torusCount + "/14");
+const infoBox1 = new SecondaryBox("Checkpoints: " + torusCount + "/14");
+//Adicionadas informações de controle
 
+var controls = new InfoBox("Controls:\n ce besta " );
+controls.infoBox.style.backgroundColor = "black";
+controls.infoBox.style.height = "250px" ;
+controls.infoBox.style.color = "blue"
+controls.infoBox.style.top = "0";
+controls.infoBox.style.padding = "6px 6px";
+controls.add("Movement controls");
+controls.addParagraph();
+controls.add("Keyboard:");            
+controls.add("* Q | A - Speed Up | Speed Down");
+controls.add("* Arrow Down | Arrow UP - up | down");
+controls.add("* Aroow Left | Arrow Right - left | right");
+controls.addParagraph();    
+controls.add("Camera modes:");            
+controls.add("* SPACE - Inspection Mode");        
+controls.add("* C - Cockpit Mode");
+controls.add("* ENTER - Show/Hide Path");
+controls.add("* H - Show/Hide controls")
+controls.show();
 const speedBox = new SecondaryBox("0 m/s");
 speedBox.box.style.left = "auto";
 speedBox.box.style.right = "0";
@@ -53,9 +74,9 @@ speedBox.box.style.right = "0";
 // -- Criação de grupos que auxiliam a movimentação e rotação --
 const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
 const movementGroupPosition = new THREE.Vector3(7.5, 15, -30); // Salva posicao do grupo para voltar do modo inspecao
-const movementGroupRotation = new THREE.Euler(); // Salva rotacao do grupo para voltar do modo inspecao
 movementGroup.position.copy(movementGroupPosition);
 scene.add(movementGroup);
+
 
 const rotationGroup = new THREE.Group();
 movementGroup.add(rotationGroup);
@@ -76,43 +97,40 @@ const trackballControls = new TrackballControls(camera, renderer.domElement);
 trackballControls.enabled = false;
 
 // -- Criação das luzes --
-const hemisphereLight = new THREE.HemisphereLight(0xa7ceeb, 0x234423, 1.6);
+const hemisphereLight = new THREE.HemisphereLight('#888899', '#556655', 1);
 scene.add(hemisphereLight);
 
-const light = new THREE.DirectionalLight(0xffffff, 1); // Luz padrão
-light.position.set(400, 300, -600);
-scene.add(light);
 
 // Luz que acompanha o avião para projetar sua sombra e das árvores próximas
-// const movingLight = new THREE.DirectionalLight(0xffffff, 1);
-// movingLight.castShadow = true;
-// movingLight.position.set(400, 300, -600);
+ const movingLight = new THREE.DirectionalLight(0xffffff, 1);
+ movingLight.castShadow = true;
+ movingLight.position.set(400, 300, -600);
 
-// movingLight.shadow.mapSize.width = 1024; // default
-// movingLight.shadow.mapSize.height = 1024; // default
-// movingLight.shadow.camera.far = 1500;
-// movingLight.shadow.camera.right = 100
-// movingLight.shadow.camera.left = -100;
-// movingLight.shadow.camera.top = 100;
-// movingLight.shadow.camera.bottom = -100;
+ movingLight.shadow.mapSize.width = 1024; // default
+ movingLight.shadow.mapSize.height = 1024; // default
+ movingLight.shadow.camera.far = 1500;
+ movingLight.shadow.camera.right = 300
+ movingLight.shadow.camera.left = -300;
+ movingLight.shadow.camera.top = 300;
+ movingLight.shadow.camera.bottom = -300;
 
-// const target = new THREE.Object3D();
-// movementGroup.add(target);
+ const target = new THREE.Object3D();
+ movementGroup.add(target);
 
-// movingLight.target = target;
+ movingLight.target = target;
 
-// movementGroup.add(movingLight);
+ movementGroup.add(movingLight);
 
-// const cameraHelper = new THREE.CameraHelper(movingLight.shadow.camera);
-// scene.add(cameraHelper);
+ const cameraHelper = new THREE.CameraHelper(movingLight.shadow.camera);
+ scene.add(cameraHelper);
 
-// const helper = new THREE.DirectionalLightHelper(movingLight, 5);
-// scene.add(helper);
+ const helper = new THREE.DirectionalLightHelper(movingLight, 5);
+ scene.add(helper);
 
 
 // -- Lightmap das sombras das árvores --
-// let lm = textureLoader.load('assets/textures/ground-shadow.png')
-// lm.flipY = false;
+ let lm = textureLoader.load('assets/textures/ground-shadow.png')
+ lm.flipY = false;
 
 // --- Skybox --- //
 const cubeTextureLoader = new THREE.CubeTextureLoader();
@@ -125,8 +143,25 @@ const texture = cubeTextureLoader.load([
     'assets/textures/skybox/back.bmp',
 ]);
 scene.background = texture;
+//------Adição dos sons----///
 
+var firstPlay = false;
+var listener = new THREE.AudioListener();
+  movementGroup.add( listener );
 
+// create a global audio source
+const sound = new THREE.Audio( listener );  
+
+// Create ambient sound
+var audioLoader = new THREE.AudioLoader();
+audioLoader.load( './assets/sounds/sampleMusic.mp3', function( buffer ) {
+	sound.setBuffer( buffer );
+	sound.setLoop( true );
+	sound.setVolume( 1 );
+});
+
+sound.play();
+movementGroup.add(sound);
 // ------------------------------------------------------- //
 // ---------- Criação da Cidade ------------------------- //
 // ----------------------------------------------------- //
@@ -140,7 +175,7 @@ sideWalkTexture.wrapT = THREE.RepeatWrapping;
 sideWalkTexture.repeat.set(600, 600);
 
 const cityGroundGeo = new THREE.PlaneGeometry(1000, 1000);
-const cityGroundMat = new THREE.MeshBasicMaterial({ map: sideWalkTexture });
+const cityGroundMat = new THREE.MeshLambertMaterial({ map: sideWalkTexture });
 
 // Cria um segundo array de UVs para funcionar o lightmap
 // let uv1 = groundGeo.getAttribute('uv').array;
@@ -148,24 +183,29 @@ const cityGroundMat = new THREE.MeshBasicMaterial({ map: sideWalkTexture });
 
 const cityGround = new THREE.Mesh(cityGroundGeo, cityGroundMat);
 cityGround.rotation.x = Math.PI * -0.5;
-cityGround.receiveShadow = true;
 cityGround.position.y = 0;
+cityGround.material.shadowSide = 5;
+cityGround.receiveShadow = true;
 cityGroup.add(cityGround);
+
 
 // --- Criação das ruas e prédios ----
 const streetTexture = textureLoader.load('assets/textures/asfalto.jpg');
 streetTexture.wrapT = THREE.RepeatWrapping;
 streetTexture.repeat.set(1, 85 / 15);
 const streetGeo = new THREE.PlaneGeometry(15, 185);
+streetGeo.receiveShadow = true;
 const streetMat = new THREE.MeshLambertMaterial({ map: streetTexture });
 
 const streetTexture2 = textureLoader.load('assets/textures/asfalto.jpg');
 streetTexture2.wrapS = THREE.RepeatWrapping;
 streetTexture2.repeat.set(1, 1);
 const streetGeo2 = new THREE.PlaneGeometry(15, 85);
+streetGeo2.receiveShadow = true;
 const streetMat2 = new THREE.MeshLambertMaterial({ map: streetTexture2 });
 
 const streetGeo3 = new THREE.PlaneGeometry(15, 15);
+streetGeo3.receiveShadow = true;
 const streetMat3 = new THREE.MeshLambertMaterial({ color: 0x000000 });
 
 createStreets();
@@ -180,6 +220,7 @@ function createStreets() {
                 street1.position.x = -500 + 7.5 + 100 * i;
                 street1.position.y = 0.1;
                 street1.position.z = -500 + 92.5 + 200 * j;
+                street1.receiveShadow = true;
                 cityGroup.add(street1);
             }
 
@@ -192,6 +233,7 @@ function createStreets() {
                 street2.position.x = -500 + 42.5 + 100 * i + 15;
                 street2.position.y = 0.1;
                 street2.position.z = -500 - 7.5 + 200 * (j + 1);
+                street2.receiveShadow = true;
                 cityGroup.add(street2)
 
             }
@@ -203,6 +245,7 @@ function createStreets() {
             street3.position.x = -500 + 42.5 + 100 * i - 35;
             street3.position.y = 0.1;
             street3.position.z = -500 - 7.5 + 200 * (j + 1);
+            street3.receiveShadow = true;
             cityGroup.add(street3);
         }
     }
@@ -219,7 +262,10 @@ function towerOnLoad(gltf) {
     tower1.scale.set(5, 5, 5);
     tower1.rotation.y = Math.PI;
     tower1.position.set(-40, 0, 0);
+    tower1.castShadow = true;
+    tower1.receiveShadow = true;
     cityGroup.add(tower1);
+
 
     tower2 = tower1.clone();
     tower2.position.set(55, 0, 0);
@@ -241,6 +287,7 @@ function createBuildings() {
             building.position.x = -500 + 60 + 100 * i;
             building.position.y = 0.1;
             building.position.z = -500 + 50 + 200 * j / 2;
+            building.updateMatrix();
             cityGroup.add(building);
         }
     }
@@ -273,15 +320,16 @@ grassTexture.repeat.set(1500, 1500);
 
 const outskirtsGround = new THREE.Mesh(
     new THREE.PlaneGeometry(7500, 7500),
-    new THREE.MeshBasicMaterial({ map: grassTexture })
+    new THREE.MeshLambertMaterial({ map: grassTexture })
 );
 outskirtsGround.rotation.x = - Math.PI / 2;
 outskirtsGround.position.y = -0.1;
+outskirtsGround.receiveShadow = true;
 outskirtsGroup.add(outskirtsGround);
 
 const outerGround = new THREE.Mesh(
     new THREE.PlaneBufferGeometry(20000, 20000),
-    new THREE.MeshBasicMaterial({ color: 0x445623 }),
+    new THREE.MeshLambertMaterial({ color: 0x445623 }),
 );
 outerGround.rotation.x = - Math.PI / 2;
 outerGround.position.y = -0.5;
@@ -294,7 +342,7 @@ rocksTexture.repeat.set(1, 2);
 
 const rocks = new THREE.Mesh(
     new THREE.PlaneBufferGeometry(40, 80),
-    new THREE.MeshBasicMaterial({ map: rocksTexture, transparent: true })
+    new THREE.MeshLambertMaterial({ map: rocksTexture, transparent: true })
 );
 rocks.rotation.x = - Math.PI / 2;
 rocks.rotation.z = Math.PI / 2;
@@ -304,7 +352,7 @@ outskirtsGroup.add(rocks);
 const sandTexture = textureLoader.load('assets/textures/sand.png');
 
 const sandGeo = new THREE.CircleGeometry(30, 50);
-const sandMat = new THREE.MeshBasicMaterial({ map: sandTexture, transparent: true });
+const sandMat = new THREE.MeshLambertMaterial({ map: sandTexture, transparent: true });
 const sand = new THREE.Mesh(sandGeo, sandMat);
 sand.rotation.x = - Math.PI / 2;
 sand.position.set(-600, 0.1, 0);
@@ -316,7 +364,7 @@ leafTexture.wrapT = THREE.RepeatWrapping;
 leafTexture.repeat.set(2, 2);
 
 const leafGeo = new THREE.CircleGeometry(7, 32)
-const leafMat = new THREE.MeshBasicMaterial({ map: leafTexture, transparent: true })
+const leafMat = new THREE.MeshLambertMaterial({ map: leafTexture, transparent: true })
 const leaf = new THREE.Mesh(leafGeo, leafMat);
 leaf.rotation.x = - Math.PI / 2;
 leaf.position.y = -0.05;
@@ -327,7 +375,7 @@ waterTexture.wrapT = THREE.RepeatWrapping;
 waterTexture.repeat.set(1, 1);
 
 const pondGeo = new THREE.CircleGeometry(30, 32);
-const pondMat = new THREE.MeshBasicMaterial({ map: waterTexture, transparent: true });
+const pondMat = new THREE.MeshLambertMaterial({ map: waterTexture, transparent: true });
 const pond = new THREE.Mesh(pondGeo, pondMat);
 pond.rotation.x = - Math.PI / 2;
 pond.position.x = 580;
@@ -351,6 +399,7 @@ function mountainsOnLoad(gltf) {
             color = child.material.color;
             child.material = new THREE.MeshLambertMaterial({ color });
             child.receiveShadow = true;
+            child.castShadow = true;
         }
     });
     outskirtsGroup.add(mountains);
@@ -465,21 +514,21 @@ const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
 // Criação dos torus
 function createTorus() {
     const geometry = new THREE.RingGeometry(12, 15, 32);
-    const material = new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide, opacity: 5 });
+    const material = new THREE.MeshLambertMaterial({ color: 0xffff00, side: THREE.DoubleSide, opacity: 5 });
     const torus = new THREE.Mesh(geometry, material);
     return torus;
 }
 
 function createTorusChecekd() {
     const geometry = new THREE.RingGeometry(12, 15, 32);
-    const material = new THREE.MeshBasicMaterial({ color: '#00FF00', side: THREE.DoubleSide, opacity: 0.0005 });
+    const material = new THREE.MeshLambertMaterial({ color: '#00FF00', side: THREE.DoubleSide, opacity: 0.0005 });
     const torus = new THREE.Mesh(geometry, material);
     return torus;
 }
 
 function createTorusNext() {
     const geometry = new THREE.RingGeometry(12, 15, 32);
-    const material = new THREE.MeshBasicMaterial({ color: '#FF0000', side: THREE.DoubleSide });
+    const material = new THREE.MeshLambertMaterial({ color: '#FF0000', side: THREE.DoubleSide });
     const torus = new THREE.Mesh(geometry, material);
     return torus;
 }
@@ -512,25 +561,9 @@ gltfLoader.load('assets/airplane-camuflado.glb', airplaneOnLoad, onProgress, onE
 function airplaneOnLoad(gltf) {
     airplane = gltf.scene;
 
-    // Converte o MeshStandardMaterial para MeshPhongMaterial
-    let color, transparent, opacity;
-    airplane.traverse((child) => {
-        if (child.isMesh && false) {
-
-            color = child.material.color;
-            transparent = child.material.transparent;
-            opacity = child.material.opacity;
-
+    airplane.traverse(child => {
+        if (child.isMesh) {
             child.castShadow = true;
-
-            if (/cockpit/.test(child.name)) {
-                child.material = new THREE.MeshPhongMaterial({ color, transparent, opacity, side: THREE.DoubleSide })
-            }
-            else if (/wh*/.test(child.name)) {
-                child.material = new THREE.MeshLambertMaterial({ color })
-            }
-            else
-                child.material = new THREE.MeshPhongMaterial({ color, shininess: 40, specular: 0x11F11 })
         }
     });
     camera.lookAt(movementGroupPosition);
@@ -900,6 +933,9 @@ function onKeyDown(event) {
             parent.visible = !parent.visible;
             break;
         }
+        case 'h': {
+            controls.infoBox.hidden = !controls.infoBox.hidden;
+        }
     }
 }
 
@@ -938,10 +974,9 @@ function render() {
     }
     renderer.render(scene, camera) // Render scene
     // detectContact();
-
     if (start) { //Contador de tempo colocado no render para ter atualização em tempo real
         sec = clock.getElapsedTime().toFixed(2);
-        infoBox.changeMessage("Checkpoints: " + torusCount + "/14 Time: " + sec + "s");
+        infoBox1.changeMessage("Checkpoints: " + torusCount + "/14 Time: " + sec + "s");
     }
 }
 
@@ -962,6 +997,7 @@ function building1() {
     top.position.y = 40;
     building.add(top);
 
+    building.matrixAutoUpdate = false;
     return building;
 }
 
@@ -986,6 +1022,7 @@ function building2() {
     top.position.y = 30;
     building.add(top);
 
+    building.matrixAutoUpdate = false;
     return building;
 }
 
@@ -997,7 +1034,7 @@ function building3() {
     bottomTexture.repeat.set(1, 3);
 
     const groundGeo = new THREE.PlaneGeometry(4.5, 40);
-    const groundMat = new THREE.MeshBasicMaterial({ map: bottomTexture });
+    const groundMat = new THREE.MeshLambertMaterial({ map: bottomTexture });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.position.y = 0.2;
     ground.rotation.x = - Math.PI / 2;
@@ -1016,6 +1053,7 @@ function building3() {
     tower2.position.set(-9, 35, 0);
     building.add(tower2);
 
+    building.matrixAutoUpdate = false;
     return building;
 }
 
@@ -1028,9 +1066,11 @@ function building4() {
     bottomTexture.repeat.set(4, 1);
 
     const bottomGeo = new THREE.CylinderGeometry(15, 15, 10);
-    const bottomMat = new THREE.MeshBasicMaterial({ map: bottomTexture });
+    const bottomMat = new THREE.MeshLambertMaterial({ map: bottomTexture });
     const bottom = new THREE.Mesh(bottomGeo, bottomMat);
     bottom.position.y = 5;
+    bottom.castShadow = true;
+    bottom.receiveShadow = true;
     building.add(bottom);
 
     let topTexture = textureLoader.load('assets/textures/window4.jpg')
@@ -1039,11 +1079,14 @@ function building4() {
     topTexture.repeat.set(4, 4);
 
     const topGeo = new THREE.CylinderGeometry(20, 20, 50, 16);
-    const topMat = new THREE.MeshBasicMaterial({ map: topTexture });
+    const topMat = new THREE.MeshLambertMaterial({ map: topTexture });
     const top = new THREE.Mesh(topGeo, topMat);
     top.position.y = 35;
+    top.castShadow = true;
+    top.receiveShadow = true;
     building.add(top);
 
+    building.matrixAutoUpdate = false;
     return building;
 }
 
@@ -1063,6 +1106,7 @@ function building5() {
     top.position.y = 60;
     building.add(top);
 
+    building.matrixAutoUpdate = false;
     return building;
 }
 
@@ -1094,9 +1138,10 @@ function building6() {
 
     const column1 = new THREE.Mesh(
         new THREE.CylinderGeometry(2, 2, 10, 24),
-        new THREE.MeshBasicMaterial({ map: columnTexture })
+        new THREE.MeshLambertMaterial({ map: columnTexture })
     );
     column1.position.set(15, 5, 15);
+    column1.castShadow = true;
     building.add(column1);
 
     const column2 = column1.clone();
@@ -1110,7 +1155,8 @@ function building6() {
     const column4 = column1.clone();
     column4.position.set(15, 5, -15);
     building.add(column4);
-
+    
+    building.matrixAutoUpdate = false;
     return building;
 }
 
@@ -1118,27 +1164,33 @@ function customBox(width, height, depth, texture, topColor) {
     const box = new THREE.Object3D();
 
     const geo1 = new THREE.PlaneGeometry(width, height);
-    const mat1 = new THREE.MeshBasicMaterial({ map: texture });
+    const mat1 = new THREE.MeshLambertMaterial({ map: texture });
     const face1 = new THREE.Mesh(geo1, mat1);
 
     face1.position.set(0, 0, -depth / 2);
     face1.rotation.set(0, Math.PI, 0);
+    face1.castShadow = true;
+    face1.receiveShadow = true;
     box.add(face1);
 
     const geo2 = new THREE.PlaneGeometry(depth, height);
-    const mat2 = new THREE.MeshBasicMaterial({ map: texture });
+    const mat2 = new THREE.MeshLambertMaterial({ map: texture });
     const face2 = new THREE.Mesh(geo2, mat2);
 
     face2.position.set(width / 2, 0, 0);
     face2.rotation.set(0, Math.PI / 2, 0);
+    face2.castShadow = true;
+    face2.receiveShadow = true;
     box.add(face2);
 
     const geo3 = new THREE.PlaneGeometry(width, depth);
-    const mat3 = new THREE.MeshBasicMaterial({ color: topColor || null, map: topColor ? null : texture });
+    const mat3 = new THREE.MeshLambertMaterial({ color: topColor || null, map: topColor ? null : texture });
     const face3 = new THREE.Mesh(geo3, mat3);
 
     face3.position.set(0, height / 2, 0);
     face3.rotation.set(-Math.PI / 2, 0, 0);
+    face3.castShadow = true;
+    face3.receiveShadow = true;
     box.add(face3);
 
     const face4 = face1.clone();
