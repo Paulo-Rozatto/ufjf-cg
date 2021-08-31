@@ -37,11 +37,11 @@ let sec = 0;
 //LoadScreen
 const loadingManager = new THREE.LoadingManager( () => {
 	
-    const loadingScreen = document.getElementById( 'loading-screen' );
-    loadingScreen.classList.add( 'fade-out' );
-    
-    // optional: remove loader from DOM via event listener
-    loadingScreen.addEventListener( 'transitionend', onTransitionEnd );
+    const loader = document.getElementById( 'loader' );
+    loader.style.display = 'none';
+
+    const button = document.getElementById('start');
+    button.style.display = 'inline-block';
     
 } );
 
@@ -171,9 +171,8 @@ audioLoader.load( './assets/sounds/sampleMusic.mp3', function( buffer ) {
 	sound.setLoop( true );
 	sound.setVolume( 1 );
 });
-
-sound.play();
 movementGroup.add(sound);
+
 // ------------------------------------------------------- //
 // ---------- Criação da Cidade ------------------------- //
 // ----------------------------------------------------- //
@@ -933,7 +932,6 @@ function onKeyDown(event) {
             break;
         }
         case 'q': {
-            sound.play();
             accOietantion = 1;
             break;
         };
@@ -1248,10 +1246,3 @@ function customBox(width, height, depth, texture, topColor) {
     return box;
 
 }
-
-function onTransitionEnd(event) {
-
-    const element = event.target;
-    element.remove();
-  
-  }
