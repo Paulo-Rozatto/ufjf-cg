@@ -274,8 +274,13 @@ function towerOnLoad(gltf) {
     tower1.scale.set(5, 5, 5);
     tower1.rotation.y = Math.PI;
     tower1.position.set(-40, 0, 0);
-    tower1.castShadow = true;
-    tower1.receiveShadow = true;
+
+    tower1.traverse((child) => {
+        if (child.isMesh) {
+            child.castShadow = true;
+        }
+    });
+
     cityGroup.add(tower1);
 
 
