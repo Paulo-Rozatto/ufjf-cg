@@ -85,7 +85,7 @@ speedBox.box.style.right = "0";
 
 // -- Criação de grupos que auxiliam a movimentação e rotação --
 const movementGroup = new THREE.Group(); // Grupo para manipular aviao e camera ao mesmo tempo
-const movementGroupPosition = new THREE.Vector3(7.5, 15, -30); // Salva posicao do grupo para voltar do modo inspecao
+const movementGroupPosition = new THREE.Vector3(10, 28, -800); // Salva posicao do grupo para voltar do modo inspecao
 movementGroup.position.copy(movementGroupPosition);
 scene.add(movementGroup);
 
@@ -504,20 +504,20 @@ scene.add(parent);
 
 // Vetor de pontos para a curva CatmullRoll e para a posicao dos torus
 const points = [
-    new THREE.Vector3(-130, 95, -200),
-    new THREE.Vector3(-190, 150, 106),
-    new THREE.Vector3(-200, 108, 665),
-    new THREE.Vector3(-383, 137, 860),
-    new THREE.Vector3(-603, 145, 900),
-    new THREE.Vector3(-850, 138, 309),
-    new THREE.Vector3(-370, 54, -154),
-    new THREE.Vector3(-428, 142, -388),
-    new THREE.Vector3(-801, 86, -399),
-    new THREE.Vector3(-869, 54, -117),
-    new THREE.Vector3(-41, 42, 355),
-    new THREE.Vector3(338, 142, 314),
-    new THREE.Vector3(376, 154, 103),
-    new THREE.Vector3(-26, 64, -201)
+    new THREE.Vector3(10, 15, -491),
+    new THREE.Vector3(10, 15, -146),
+    new THREE.Vector3(163, 16, -88),
+    new THREE.Vector3(494, 16, -88),
+    new THREE.Vector3(485, 22, 283),
+    new THREE.Vector3(339, 22, 305),
+    new THREE.Vector3(302, 54, 482),
+    new THREE.Vector3(-317, 14, 1014),
+    new THREE.Vector3(-924, 23, 1064),
+    new THREE.Vector3(-760, 54, 544),
+    new THREE.Vector3(-453, 36, 117),
+    new THREE.Vector3(-90, 142, -252),
+    new THREE.Vector3(106, 16, -448),
+    new THREE.Vector3(215, 12, -448)    
 ];
 
 // -------- Criação do tubo que representa o caminho ----  ///
@@ -526,25 +526,25 @@ const pipeSpline = new THREE.CatmullRomCurve3(points);
 const tubeGeometry = new THREE.TubeGeometry(pipeSpline, 100, 0.25, 20, false);
 const tubeMaterial = new THREE.MeshLambertMaterial({ color: '#000080' });
 const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
-// parent.add(tube);
+ parent.add(tube);
 
 // Criação dos torus
 function createTorus() {
-    const geometry = new THREE.RingGeometry(12, 15, 32);
+    const geometry = new THREE.TorusGeometry(12, 3, 16, 100);
     const material = new THREE.MeshLambertMaterial({ color: 0xffff00, side: THREE.DoubleSide, opacity: 5 });
     const torus = new THREE.Mesh(geometry, material);
     return torus;
 }
 
 function createTorusChecekd() {
-    const geometry = new THREE.RingGeometry(12, 15, 32);
+    const geometry = new THREE.TorusGeometry(12, 3, 16, 100);
     const material = new THREE.MeshLambertMaterial({ color: '#00FF00', side: THREE.DoubleSide, opacity: 0.0005 });
     const torus = new THREE.Mesh(geometry, material);
     return torus;
 }
 
 function createTorusNext() {
-    const geometry = new THREE.RingGeometry(12, 15, 32);
+    const geometry = new THREE.TorusGeometry(12, 3, 16, 100);
     const material = new THREE.MeshLambertMaterial({ color: '#FF0000', side: THREE.DoubleSide });
     const torus = new THREE.Mesh(geometry, material);
     return torus;
@@ -553,15 +553,15 @@ function createTorusNext() {
 const deg90 = Math.PI / 2;
 // Torus que precisa passar
 const ring = createTorus();
-// scene.add(ring);
+ scene.add(ring);
 ring.position.copy(points[torusCount])
 // Próximo torus
 const nextTorus = createTorusNext();
-// scene.add(nextTorus);
+ scene.add(nextTorus);
 nextTorus.position.copy(points[torusCount + 1])
 // Torus pelo qual acabou de passar
 const checkedTorus = createTorusChecekd();
-// scene.add(checkedTorus);
+ scene.add(checkedTorus);
 checkedTorus.visible = false;
 
 
@@ -916,6 +916,11 @@ function detectContact() {
 window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
 window.addEventListener('keydown', onKeyDown, false);
 window.addEventListener('keyup', onKeyUp, false);
+window.addEventListener('click', onClick, false);
+
+function onClick(event) {
+    sound.play();
+}
 
 function onKeyDown(event) {
     switch (event.key) {
@@ -928,6 +933,7 @@ function onKeyDown(event) {
             break;
         }
         case 'q': {
+            sound.play();
             accOietantion = 1;
             break;
         };
@@ -957,6 +963,11 @@ function onKeyDown(event) {
         }
         case 'h': {
             controls.infoBox.hidden = !controls.infoBox.hidden;
+            break;
+        }
+        case 'p': {
+            console.log(movementGroup.position)
+            break;
         }
     }
 }
@@ -995,7 +1006,7 @@ function render() {
         updatePosition(moveClock.getDelta());
     }
     renderer.render(scene, camera) // Render scene
-    // detectContact();
+     detectContact();
     if (start) { //Contador de tempo colocado no render para ter atualização em tempo real
         sec = clock.getElapsedTime().toFixed(2);
         infoBox1.changeMessage("Checkpoints: " + torusCount + "/14 Time: " + sec + "s");
