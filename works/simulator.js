@@ -534,7 +534,7 @@ const points = [
     new THREE.Vector3(-924, 23, 1064),
     new THREE.Vector3(-760, 54, 544),
     new THREE.Vector3(-453, 36, 117),
-    new THREE.Vector3(-90, 142, -252),
+    new THREE.Vector3(-90, 36, -252),
     new THREE.Vector3(106, 16, -448),
     new THREE.Vector3(215, 12, -448)    
 ];
@@ -747,6 +747,7 @@ function detectContact() {
                 ring.position.copy(points[torusCount])
                 //posicionando o próximo torus
                 nextTorus.position.copy(points[torusCount + 1])
+                nextTorus.rotation.set(0, deg90 / 2, 0);
                 //posicionando o torus passado
                 checkedTorus.position.copy(points[torusCount - 1])
                 checkedTorus.visible = true;
@@ -756,23 +757,26 @@ function detectContact() {
                 torusCount = 2;
 
                 ring.position.copy(points[torusCount])
+                ring.rotation.set(0, deg90, 0);
 
                 nextTorus.position.copy(points[torusCount + 1])
-                nextTorus.rotation.set(0, deg90, 0);
+                nextTorus.rotation.set(0, deg90 / 2, 0);
 
                 checkedTorus.position.copy(points[torusCount - 1])
+
                 break;
             }
             case 2: {
                 torusCount = 3;
 
                 ring.position.copy(points[torusCount])
-                ring.rotation.set(0, deg90, 0);
+                ring.rotation.set(0, deg90 / 2 , 0);
 
                 nextTorus.position.copy(points[torusCount + 1])
                 nextTorus.rotation.set(0, deg90 / 3, 0);
 
                 checkedTorus.position.copy(points[torusCount - 1])
+                checkedTorus.rotation.set(0, deg90, 0);
 
                 break;
             }
