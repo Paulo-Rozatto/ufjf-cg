@@ -599,6 +599,9 @@ function toggleInspectionMode() {
         cityGroup.visible = false;
         outskirtsGroup.visible = false;
 
+        movingLight.position.set(0,0,0);
+        camera.add(movingLight);
+
         movementGroupPosition.copy(movementGroup.position);
         movementGroup.position.set(0, 1, 0)
         angularVel.multiplyScalar(0);
@@ -614,6 +617,8 @@ function toggleInspectionMode() {
         cityGroup.visible = true;
         outskirtsGroup.visible = true;
 
+        movementGroup.add(movingLight);
+        movingLight.position.set(400, 300, -600);
         movementGroup.position.copy(movementGroupPosition);
 
         camera.up.set(0, 1, 0);
