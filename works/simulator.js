@@ -166,10 +166,30 @@ const sound = new THREE.Audio( listener );
 
 // Create ambient sound
 var audioLoader = new THREE.AudioLoader(loadingManager);
-audioLoader.load( './assets/sounds/sampleMusic.mp3', function( buffer ) {
+audioLoader.load( './assets/sounds/run.mp3', function( buffer ) {
 	sound.setBuffer( buffer );
 	sound.setLoop( true );
-	sound.setVolume( 1 );
+	sound.setVolume( 0.5 );
+});
+movementGroup.add(sound);
+
+const airplaneSound = new THREE.Audio( listener );
+
+var audioLoader1 = new THREE.AudioLoader(loadingManager);
+audioLoader1.load( './assets/sounds/soundAirplane.mp3', function( buffer ) {
+	airplaneSound.setBuffer( buffer );
+	airplaneSound.setLoop( true );
+	airplaneSound.setVolume( 0.25 );
+});
+movementGroup.add(sound);
+
+const finishSound = new THREE.Audio( listener );
+
+var audioLoader2 = new THREE.AudioLoader(loadingManager);
+audioLoader2.load( './assets/sounds/finish.mp3', function( buffer ) {
+	finishSound.setBuffer( buffer );
+	finishSound.setLoop( true );
+	finishSound.setVolume( 0 );
 });
 movementGroup.add(sound);
 
@@ -902,6 +922,7 @@ function detectContact() {
                 clock.stop();
                 checkedTorus.position.copy(points[torusCount - 1])
                 checkedTorus.rotation.set(0, deg90, 0);
+                finishSound.setVolume ( 1 );
                 break;
             }
         }
@@ -919,6 +940,8 @@ window.addEventListener('click', onClick, false);
 
 function onClick(event) {
     sound.play();
+    airplaneSound.play();
+    finishSound.play();
 }
 
 function onKeyDown(event) {
@@ -933,6 +956,7 @@ function onKeyDown(event) {
         }
         case 'q': {
             accOietantion = 1;
+            airplaneSound.play();
             break;
         };
         case 'a': {
